@@ -17,6 +17,6 @@ pushd .\bin
      -fdiagnostics-absolute-paths ^
      -fmacro-prefix-map=..\= ^
      -DUNICODE -D_UNICODE -DWIN32 -D_WINDOWS ^
-     ..\test_win32.c ^
+     ..\test.c ^
      -o test.exe
 popd
