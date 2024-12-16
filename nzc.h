@@ -86,49 +86,54 @@ typedef Vec2u64 ulvec2;
 #define VEC2U32(a, b) ((Vec2u32){ a, b })
 #define VEC2U64(a, b) ((Vec2u64){ a, b })
 
-#define VECTOR_OP_FUNC(TYPE, FUNC_NAME, OP) \
+#define VEC2_OpFunc(TYPE, FUNC_NAME, OP) \
     TYPE FUNC_NAME(TYPE a, TYPE b) { return (TYPE){ a.X OP b.X, a.Y OP b.Y }; }
 
-inline VECTOR_OP_FUNC(Vec2f32, Vec2f32_Add, +)
-inline VECTOR_OP_FUNC(Vec2f64, Vec2f64_Add, +)
+// Vec2_Add
 
-inline VECTOR_OP_FUNC(Vec2i32, Vec2i32_Add, +)
-inline VECTOR_OP_FUNC(Vec2i64, Vec2i64_Add, +)
+inline VEC2_OpFunc(Vec2f32, Vec2f32_Add, +)
+inline VEC2_OpFunc(Vec2f64, Vec2f64_Add, +)
 
-inline VECTOR_OP_FUNC(Vec2u32, Vec2u32_Add, +)
-inline VECTOR_OP_FUNC(Vec2u64, Vec2u64_Add, +)
+inline VEC2_OpFunc(Vec2i32, Vec2i32_Add, +)
+inline VEC2_OpFunc(Vec2i64, Vec2i64_Add, +)
 
+inline VEC2_OpFunc(Vec2u32, Vec2u32_Add, +)
+inline VEC2_OpFunc(Vec2u64, Vec2u64_Add, +)
 
-inline VECTOR_OP_FUNC(Vec2f32, Vec2f32_Sub, -)
-inline VECTOR_OP_FUNC(Vec2f64, Vec2f64_Sub, -)
+// Vec2_Sub
 
-inline VECTOR_OP_FUNC(Vec2i32, Vec2i32_Sub, -)
-inline VECTOR_OP_FUNC(Vec2i64, Vec2i64_Sub, -)
+inline VEC2_OpFunc(Vec2f32, Vec2f32_Sub, -)
+inline VEC2_OpFunc(Vec2f64, Vec2f64_Sub, -)
 
-inline VECTOR_OP_FUNC(Vec2u32, Vec2u32_Sub, -)
-inline VECTOR_OP_FUNC(Vec2u64, Vec2u64_Sub, -)
+inline VEC2_OpFunc(Vec2i32, Vec2i32_Sub, -)
+inline VEC2_OpFunc(Vec2i64, Vec2i64_Sub, -)
 
+inline VEC2_OpFunc(Vec2u32, Vec2u32_Sub, -)
+inline VEC2_OpFunc(Vec2u64, Vec2u64_Sub, -)
 
-inline VECTOR_OP_FUNC(Vec2f32, Vec2f32_Mul, *)
-inline VECTOR_OP_FUNC(Vec2f64, Vec2f64_Mul, *)
+// Vec2_Mul
 
-inline VECTOR_OP_FUNC(Vec2i32, Vec2i32_Mul, *)
-inline VECTOR_OP_FUNC(Vec2i64, Vec2i64_Mul, *)
+inline VEC2_OpFunc(Vec2f32, Vec2f32_Mul, *)
+inline VEC2_OpFunc(Vec2f64, Vec2f64_Mul, *)
 
-inline VECTOR_OP_FUNC(Vec2u32, Vec2u32_Mul, *)
-inline VECTOR_OP_FUNC(Vec2u64, Vec2u64_Mul, *)
+inline VEC2_OpFunc(Vec2i32, Vec2i32_Mul, *)
+inline VEC2_OpFunc(Vec2i64, Vec2i64_Mul, *)
 
+inline VEC2_OpFunc(Vec2u32, Vec2u32_Mul, *)
+inline VEC2_OpFunc(Vec2u64, Vec2u64_Mul, *)
 
-inline VECTOR_OP_FUNC(Vec2f32, Vec2f32_Div, /)
-inline VECTOR_OP_FUNC(Vec2f64, Vec2f64_Div, /)
+// Vec2_Div
 
-inline VECTOR_OP_FUNC(Vec2i32, Vec2i32_Div, /)
-inline VECTOR_OP_FUNC(Vec2i64, Vec2i64_Div, /)
+inline VEC2_OpFunc(Vec2f32, Vec2f32_Div, /)
+inline VEC2_OpFunc(Vec2f64, Vec2f64_Div, /)
 
-inline VECTOR_OP_FUNC(Vec2u32, Vec2u32_Div, /)
-inline VECTOR_OP_FUNC(Vec2u64, Vec2u64_Div, /)
+inline VEC2_OpFunc(Vec2i32, Vec2i32_Div, /)
+inline VEC2_OpFunc(Vec2i64, Vec2i64_Div, /)
 
-#undef VECTOR_OP_FUNC
+inline VEC2_OpFunc(Vec2u32, Vec2u32_Div, /)
+inline VEC2_OpFunc(Vec2u64, Vec2u64_Div, /)
+
+#undef VEC2_OpFunc
 
 #define Vec2_Equal(A, B) \
     ((A.X == B.X) && (A.Y == B.Y))
