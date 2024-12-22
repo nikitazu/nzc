@@ -56,86 +56,112 @@ typedef double f64;
 #define NAMEOF(x) (#x)
 
 
+// Простая математика
+//
+
+#define Math_Define(T)                                  \
+    inline T T##_Clip(T v, T vmin, T vmax)              \
+    {                                                   \
+        return v < vmin ? vmin : (v > vmax ? vmax : v); \
+    }
+
+Math_Define(i32);
+Math_Define(i64);
+Math_Define(f32);
+Math_Define(f64);
+Math_Define(u32);
+Math_Define(u64);
+
+#undef Math_Define
+
+
 // Векторы 2D
 //
 
-typedef struct Vec2f32Tag { f32 X, Y; } Vec2f32;
-typedef struct Vec2f64Tag { f64 X, Y; } Vec2f64;
+#define Vec2_Define(T)                                          \
+    typedef struct Vec2##T##Tag {                               \
+        T X;                                                    \
+        T Y;                                                    \
+    } Vec2##T;                                                  \
+                                                                \
+    inline Vec2##T Vec2##T##_Add(Vec2##T a, Vec2##T b)          \
+    {                                                           \
+        return (Vec2##T){ a.X + b.X, a.Y + b.Y };               \
+    }                                                           \
+                                                                \
+    inline Vec2##T Vec2##T##_Sub(Vec2##T a, Vec2##T b)          \
+    {                                                           \
+        return (Vec2##T){ a.X - b.X, a.Y - b.Y };               \
+    }                                                           \
+                                                                \
+    inline Vec2##T Vec2##T##_Mul(Vec2##T a, Vec2##T b)          \
+    {                                                           \
+        return (Vec2##T){ a.X * b.X, a.Y * b.Y };               \
+    }                                                           \
+                                                                \
+    inline Vec2##T Vec2##T##_Div(Vec2##T a, Vec2##T b)          \
+    {                                                           \
+        return (Vec2##T){ a.X / b.X, a.Y / b.Y };               \
+    }                                                           \
+                                                                \
+    inline bool Vec2##T##_Eq(Vec2##T a, Vec2##T b)              \
+    {                                                           \
+        return a.X == b.X && a.Y == b.Y;                        \
+    }                                                           \
+                                                                \
+    inline Vec2##T Vec2##T##_Clip(Vec2##T a, T vmin, T vmax)    \
+    {                                                           \
+        return (Vec2##T){                                       \
+            T##_Clip(a.X, vmin, vmax),                          \
+            T##_Clip(a.Y, vmin, vmax),                          \
+        };                                                      \
+    }
 
-typedef struct Vec2i32Tag { i32 X, Y; } Vec2i32;
-typedef struct Vec2i64Tag { i64 X, Y; } Vec2i64;
 
-typedef struct Vec2u32Tag { u32 X, Y; } Vec2u32;
-typedef struct Vec2u64Tag { u64 X, Y; } Vec2u64;
+Vec2_Define(f32);
+Vec2_Define(f64);
+Vec2_Define(i32);
+Vec2_Define(i64);
+Vec2_Define(u32);
+Vec2_Define(u64);
+
+#undef Vec2_Define
+
 
 typedef Vec2f32 fvec2;
 typedef Vec2f64 dvec2;
-
 typedef Vec2i32 ivec2;
 typedef Vec2i64 lvec2;
-
 typedef Vec2u32 uvec2;
 typedef Vec2u64 ulvec2;
 
-#define VEC2F32(a, b) ((Vec2f32){ a, b })
-#define VEC2F64(a, b) ((Vec2f64){ a, b })
 
-#define VEC2I32(a, b) ((Vec2i32){ a, b })
-#define VEC2I64(a, b) ((Vec2i64){ a, b })
+#define FVEC2(a, b) ((fvec2){ a, b })
+#define DVEC2(a, b) ((dvec2){ a, b })
+#define IVEC2(a, b) ((ivec2){ a, b })
+#define LVEC2(a, b) ((lvec2){ a, b })
+#define UVEC2(a, b) ((uvec2){ a, b })
+#define ULVEC2(a, b) ((ulvec2){ a, b })
 
-#define VEC2U32(a, b) ((Vec2u32){ a, b })
-#define VEC2U64(a, b) ((Vec2u64){ a, b })
 
-#define VEC2_OpFunc(TYPE, FUNC_NAME, OP) \
-    TYPE FUNC_NAME(TYPE a, TYPE b) { return (TYPE){ a.X OP b.X, a.Y OP b.Y }; }
+#define Vec2f32_ZERO ((fvec2){0})
+#define Vec2f64_ZERO ((dvec2){0})
+#define Vec2i32_ZERO ((ivec2){0})
+#define Vec2i64_ZERO ((lvec2){0})
+#define Vec2u32_ZERO ((uvec2){0})
+#define Vec2u64_ZERO ((ulvec2){0})
 
-// Vec2_Add
 
-inline VEC2_OpFunc(Vec2f32, Vec2f32_Add, +)
-inline VEC2_OpFunc(Vec2f64, Vec2f64_Add, +)
+#define Vec2f32_FMT "{%f;%f}"
+#define Vec2f64_FMT "{%f;%f}"
+#define Vec2i32_FMT "{%i;%i}"
+#define Vec2i64_FMT "{%lld;%lld}"
+#define Vec2u32_FMT "{%i;%i}"
+#define Vec2u64_FMT "{%lld;%lld}"
 
-inline VEC2_OpFunc(Vec2i32, Vec2i32_Add, +)
-inline VEC2_OpFunc(Vec2i64, Vec2i64_Add, +)
-
-inline VEC2_OpFunc(Vec2u32, Vec2u32_Add, +)
-inline VEC2_OpFunc(Vec2u64, Vec2u64_Add, +)
-
-// Vec2_Sub
-
-inline VEC2_OpFunc(Vec2f32, Vec2f32_Sub, -)
-inline VEC2_OpFunc(Vec2f64, Vec2f64_Sub, -)
-
-inline VEC2_OpFunc(Vec2i32, Vec2i32_Sub, -)
-inline VEC2_OpFunc(Vec2i64, Vec2i64_Sub, -)
-
-inline VEC2_OpFunc(Vec2u32, Vec2u32_Sub, -)
-inline VEC2_OpFunc(Vec2u64, Vec2u64_Sub, -)
-
-// Vec2_Mul
-
-inline VEC2_OpFunc(Vec2f32, Vec2f32_Mul, *)
-inline VEC2_OpFunc(Vec2f64, Vec2f64_Mul, *)
-
-inline VEC2_OpFunc(Vec2i32, Vec2i32_Mul, *)
-inline VEC2_OpFunc(Vec2i64, Vec2i64_Mul, *)
-
-inline VEC2_OpFunc(Vec2u32, Vec2u32_Mul, *)
-inline VEC2_OpFunc(Vec2u64, Vec2u64_Mul, *)
-
-// Vec2_Div
-
-inline VEC2_OpFunc(Vec2f32, Vec2f32_Div, /)
-inline VEC2_OpFunc(Vec2f64, Vec2f64_Div, /)
-
-inline VEC2_OpFunc(Vec2i32, Vec2i32_Div, /)
-inline VEC2_OpFunc(Vec2i64, Vec2i64_Div, /)
-
-inline VEC2_OpFunc(Vec2u32, Vec2u32_Div, /)
-inline VEC2_OpFunc(Vec2u64, Vec2u64_Div, /)
-
-#undef VEC2_OpFunc
 
 #define Vec2_Equal(A, B) \
     ((A.X == B.X) && (A.Y == B.Y))
+
 
 #endif // NZC_NZC_H
