@@ -49,6 +49,14 @@ typedef float f32;
 typedef double f64;
 
 
+#define f32_FMT "%f"
+#define f64_FMT "%f"
+#define i32_FMT "%i"
+#define i64_FMT "%lld"
+#define u32_FMT "%i"
+#define u64_FMT "%lld"
+
+
 // Макросы на каждый день
 //
 
@@ -63,6 +71,11 @@ typedef double f64;
     inline T T##_Clip(T v, T vmin, T vmax)              \
     {                                                   \
         return v < vmin ? vmin : (v > vmax ? vmax : v); \
+    }                                                   \
+                                                        \
+    inline void T##_ClipAssign(T* v, T vmin, T vmax)    \
+    {                                                   \
+        *v = T##_Clip(*v, vmin, vmax);                  \
     }
 
 Math_Define(i32);
