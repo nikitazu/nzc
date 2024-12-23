@@ -68,14 +68,14 @@ typedef double f64;
 //
 
 #define Math_Define(T)                                  \
-    inline T T##_Clip(T v, T vmin, T vmax)              \
+    inline T T##_Clamp(T v, T vmin, T vmax)              \
     {                                                   \
         return v < vmin ? vmin : (v > vmax ? vmax : v); \
     }                                                   \
                                                         \
-    inline void T##_ClipAssign(T* v, T vmin, T vmax)    \
+    inline void T##_ClampAssign(T* v, T vmin, T vmax)    \
     {                                                   \
-        *v = T##_Clip(*v, vmin, vmax);                  \
+        *v = T##_Clamp(*v, vmin, vmax);                  \
     }
 
 Math_Define(i32);
@@ -122,18 +122,18 @@ Math_Define(u64);
         return a.X == b.X && a.Y == b.Y;                        \
     }                                                           \
                                                                 \
-    inline Vec2##T Vec2##T##_Clip(Vec2##T a, T vmin, T vmax)    \
+    inline Vec2##T Vec2##T##_Clamp(Vec2##T a, T vmin, T vmax)   \
     {                                                           \
         return (Vec2##T){                                       \
-            T##_Clip(a.X, vmin, vmax),                          \
-            T##_Clip(a.Y, vmin, vmax),                          \
+            T##_Clamp(a.X, vmin, vmax),                         \
+            T##_Clamp(a.Y, vmin, vmax),                         \
         };                                                      \
     }                                                           \
                                                                         \
-    inline void Vec2##T##_ClipAssign(Vec2##T* a, T vmin, T vmax)        \
+    inline void Vec2##T##_ClampAssign(Vec2##T* a, T vmin, T vmax)       \
     {                                                                   \
-        T##_ClipAssign(&a->X, vmin, vmax);                              \
-        T##_ClipAssign(&a->Y, vmin, vmax);                              \
+        T##_ClampAssign(&a->X, vmin, vmax);                             \
+        T##_ClampAssign(&a->Y, vmin, vmax);                             \
     }
 
 

@@ -11,15 +11,15 @@
            OP, E.X, E.Y, A.X, A.Y, F, L);
 
 
-#define TEST_Clip(T, VMIN, VMAX)                                        \
+#define TEST_Clamp(T, VMIN, VMAX)                                        \
     {                                                                   \
         T r, e;                                                         \
         e = VMIN;                                                       \
         r = VMIN - 1;                                                   \
-        T##_ClipAssign(&r, VMIN, VMAX);                                 \
+        T##_ClampAssign(&r, VMIN, VMAX);                                 \
         success = (r == VMIN);                                          \
         if (!success) {                                                 \
-            PRINT_Failed(T##_FMT, "Clip", e, r, __FILE__, __LINE__);    \
+            PRINT_Failed(T##_FMT, "Clamp", e, r, __FILE__, __LINE__);    \
         }                                                               \
     }
 
@@ -75,12 +75,12 @@ i32 main(i32 argc, const char** args)
 
     bool success = true;
 
-    TEST_Clip(f32, 1.0f, 2.0f);
-    TEST_Clip(f64, 1.0, 2.0);
-    TEST_Clip(i32, 1, 2);
-    TEST_Clip(i64, 1, 2);
-    TEST_Clip(u32, 1, 2);
-    TEST_Clip(u64, 1, 2);
+    TEST_Clamp(f32, 1.0f, 2.0f);
+    TEST_Clamp(f64, 1.0, 2.0);
+    TEST_Clamp(i32, 1, 2);
+    TEST_Clamp(i64, 1, 2);
+    TEST_Clamp(u32, 1, 2);
+    TEST_Clamp(u64, 1, 2);
 
     TEST_Vec2(Vec2f32, 1.5f, 2.0f, 0.5f, 1.0f);
     TEST_Vec2(Vec2f64, 1.5, 2.0, 0.5, 1.0);
