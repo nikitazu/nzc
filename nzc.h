@@ -128,6 +128,12 @@ Math_Define(u64);
             T##_Clip(a.X, vmin, vmax),                          \
             T##_Clip(a.Y, vmin, vmax),                          \
         };                                                      \
+    }                                                           \
+                                                                        \
+    inline void Vec2##T##_ClipAssign(Vec2##T* a, T vmin, T vmax)        \
+    {                                                                   \
+        T##_ClipAssign(&a->X, vmin, vmax);                              \
+        T##_ClipAssign(&a->Y, vmin, vmax);                              \
     }
 
 
