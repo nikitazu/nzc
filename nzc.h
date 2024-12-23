@@ -134,6 +134,17 @@ Math_Define(u64);
     {                                                                   \
         T##_ClampAssign(&a->X, vmin, vmax);                             \
         T##_ClampAssign(&a->Y, vmin, vmax);                             \
+    }                                                                   \
+                                                                        \
+    inline Vec2##T Vec2##T##_Scale(Vec2##T a, T val)                    \
+    {                                                                   \
+        return (Vec2##T){ a.X * val, a.Y * val };                       \
+    }                                                                   \
+                                                                        \
+    inline void Vec2##T##_ScaleAssign(Vec2##T* a, T val)                \
+    {                                                                   \
+        a->X *= val;                                                    \
+        a->Y *= val;                                                    \
     }
 
 

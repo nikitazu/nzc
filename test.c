@@ -66,6 +66,25 @@
         if (!success) {                                                 \
             PRINT_Vec2Failed(T##_FMT, "Vec2_Div", e, r, __FILE__, __LINE__); \
         }                                                               \
+                                                                        \
+        e.X = X0 * X1;                                                  \
+        e.Y = Y0 * X1;                                                  \
+        r = T##_Scale(a, b.X);                                          \
+                                                                        \
+        success = Vec2_Equal(r, e);                                     \
+        if (!success) {                                                 \
+            PRINT_Vec2Failed(T##_FMT, "Vec2_Scale", e, r, __FILE__, __LINE__); \
+        }                                                               \
+                                                                        \
+        e.X = X0 * X1;                                                  \
+        e.Y = Y0 * X1;                                                  \
+        r = a;                                                          \
+        T##_ScaleAssign(&r, b.X);                                       \
+                                                                        \
+        success = Vec2_Equal(r, e);                                     \
+        if (!success) {                                                 \
+            PRINT_Vec2Failed(T##_FMT, "Vec2_ScaleAssign", e, r, __FILE__, __LINE__); \
+        }                                                               \
     }
 
 
