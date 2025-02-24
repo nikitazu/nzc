@@ -2,24 +2,31 @@
 #include <stdio.h>
 
 
+#define PRINT(FMT, ARGS...) (fprintf(stderr, FMT "\n", ARGS))
+
+
 #define PRINT_Failed(FMT, OP, E, A, F, L)                               \
-    printf("Error: %s failed, expected " FMT " got " FMT " at %s:%d\n", \
-           OP, E, A, F, L);
+    fprintf(stderr,                                                     \
+            "Error: %s failed\n"                                        \
+            "  expected " FMT "\n"                                      \
+            "  got " FMT " at %s:%d\n\n",                               \
+            OP, E, A, F, L);
 
 #define PRINT_Vec2Failed(FMT, OP, E, A, F, L)                           \
-    printf("Error: %s failed, expected " FMT " got " FMT " at %s:%d\n", \
-           OP, E.X, E.Y, A.X, A.Y, F, L);
+    fprintf(stderr,                                                     \
+            "Error: %s failed, expected " FMT " got " FMT " at %s:%d\n", \
+            OP, E.X, E.Y, A.X, A.Y, F, L);
 
 
-#define TEST_Clamp(T, VMIN, VMAX)                                        \
+#define TEST_Clamp(T, VMIN, VMAX)                                       \
     {                                                                   \
         T r, e;                                                         \
         e = VMIN;                                                       \
         r = VMIN - 1;                                                   \
-        T##_ClampAssign(&r, VMIN, VMAX);                                 \
+        T##_ClampAssign(&r, VMIN, VMAX);                                \
         success = (r == VMIN);                                          \
         if (!success) {                                                 \
-            PRINT_Failed(T##_FMT, "Clamp", e, r, __FILE__, __LINE__);    \
+            PRINT_Failed(T##_FMT, "Clamp", e, r, __FILE__, __LINE__);   \
         }                                                               \
     }
 
@@ -88,9 +95,125 @@
     }
 
 
+void TEST_Arena(bool* success)
+{
+    Arena arena = Arena_Create(KB(10));
+
+    if (arena.Buffer == nil)
+    {
+        PRINT_Failed("%s", "Arena_Create", "arena.Buffer", "nil", __FILE__, __LINE__);
+        *success = false;
+        return;
+    }
+
+    if (arena.Size == 0)
+    {
+        PRINT_Failed("%s", "Arena_Create", "arena.Size", "0", __FILE__, __LINE__);
+        *success = false;
+        return;
+    }
+
+    char* buffer = Arena_Push(&arena, 255, char); // TODO cast inside macro
+    if (buffer == nil)
+    {
+        PRINT_Failed("%s", "Arena_Alloc (char* buffer)", "pointer", "nil", __FILE__, __LINE__);
+        *success = false;
+        goto cleanup;
+    }
+
+    char* foo = Arena_Push(&arena, 100, char);
+    if (foo == nil)
+    {
+        PRINT_Failed("%s", "Arena_Alloc (char foo[100])", "pointer", "nil", __FILE__, __LINE__);
+        *success = false;
+        goto cleanup;
+    }
+
+    strcpy_s(foo, 100, "ma string!");
+    sprintf(buffer, "`%s`", foo);
+
+    if (strcmp(buffer, "`ma string!`") != 0)
+    {
+        PRINT_Failed("%s", "Arena_Alloc (sprintf)", "`ma string!`", buffer, __FILE__, __LINE__);
+        *success = false;
+        goto cleanup;
+    }
+
+    foo = Arena_Push(&arena, 50, char);
+    if (foo == nil)
+    {
+        PRINT_Failed("%s", "Arena_Alloc (char foo[50])", "pointer", "nil", __FILE__, __LINE__);
+        *success = false;
+        goto cleanup;
+    }
+
+    strcpy_s(foo, 50, "no ma string!");
+    sprintf(buffer, "`%s`", foo);
+
+    if (strcmp(buffer, "`no ma string!`") != 0)
+    {
+        PRINT_Failed("%s", "Arena_Alloc (sprintf)", "`no ma string!`", buffer, __FILE__, __LINE__);
+        *success = false;
+        goto cleanup;
+    }
+
+    foo = Arena_Push(&arena, 10, char);
+    if (foo == nil)
+    {
+        PRINT_Failed("%s", "Arena_Alloc (char foo[10])", "pointer", "nil", __FILE__, __LINE__);
+        *success = false;
+        goto cleanup;
+    }
+
+    int* barN1 = Arena_Push(&arena, 1, int);
+    if (barN1 == nil)
+    {
+        PRINT_Failed("%s", "Arena_Alloc (int*)", "pointer", "nil", __FILE__, __LINE__);
+        *success = false;
+        goto cleanup;
+    }
+
+    float* barN2 = Arena_Push(&arena, 1, float);
+    if (barN2 == nil)
+    {
+        PRINT_Failed("%s", "Arena_Alloc (float*)", "pointer", "nil", __FILE__, __LINE__);
+        *success = false;
+        goto cleanup;
+    }
+
+    strcpy_s(foo, 10, "howdy!");
+    *barN1 = 123;
+    *barN2 = 0.456f;
+
+    sprintf(buffer, "s: %s d: %d f: %f", foo, *barN1, *barN2);
+
+    if (strcmp(buffer, "s: howdy! d: 123 f: 0.456000") != 0)
+    {
+        PRINT_Failed("%s", "Arena_Alloc (sprintf)",
+                     "s: howdy! d: 123 f: 0.456", buffer,
+                     __FILE__, __LINE__);
+        *success = false;
+        goto cleanup;
+    }
+
+    Arena_Reset(&arena);
+
+    if (arena.Offset > 0)
+    {
+        PRINT_Failed("%zu", "Arena_Reset (arena.Offset == 0)",
+                     (size_t)0, arena.Offset, __FILE__, __LINE__);
+        *success = false;
+        goto cleanup;
+    }
+
+cleanup:
+    Arena_Free(&arena);
+}
+
+
 i32 main(i32 argc, const char** args)
 {
-    printf("NZC test start\n");
+    PRINT("NZC test start");
 
     bool success = true;
 
@@ -108,11 +231,15 @@ i32 main(i32 argc, const char** args)
     TEST_Vec2(Vec2u32, 15, 20, 05, 10);
     TEST_Vec2(Vec2u64, 15, 20, 05, 10);
 
-    if (success) {
-        printf("Success\n");
+    TEST_Arena(&success);
+
+    if (success)
+    {
+        PRINT("Success");
     }
-    else {
-        printf("Failed\n");
+    else
+    {
+        PRINT("Failed");
     }
 
     return success ? 0 : 1;

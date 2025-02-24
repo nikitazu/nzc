@@ -1,7 +1,7 @@
 #ifndef NZC_NZC_H
 #define NZC_NZC_H
 
-/* Nikita Zuev Common Code Library v0.1.0
+/* Nikita Zuev Common Code Library v0.2.0
  * ======================================
  */
 
@@ -11,13 +11,21 @@
 
 #include <assert.h>
 #include <limits.h>
+#include <malloc.h>
 #include <math.h>
+#include <memory.h>
+#include <string.h>
+
+
+
+// Стандартные типы и литералы
+//
+
+#ifndef NZC_NZC_H__COMMON_TYPES
+#define NZC_NZC_H__COMMON_TYPES
+
 #include <stdint.h>
 #include <stdbool.h>
-
-
-// Литералы
-//
 
 #define nil NULL
 
@@ -31,9 +39,6 @@
 #define I32_MIN INT_MIN
 #define I32_MAX INT_MAX
 
-
-// Стандартные типы
-//
 
 typedef int8_t i8;
 typedef int16_t i16;
@@ -49,6 +54,10 @@ typedef float f32;
 typedef double f64;
 
 
+#endif // NZC_NZC_H__COMMON_TYPES
+
+
+
 #define f32_FMT "%f"
 #define f64_FMT "%f"
 #define i32_FMT "%i"
@@ -62,6 +71,7 @@ typedef double f64;
 
 #define UNUSED(x) (void)(x)
 #define NAMEOF(x) (#x)
+#define KB(x) (x * 1024)
 
 
 // Простая математика
@@ -86,6 +96,87 @@ Math_Define(u32);
 Math_Define(u64);
 
 #undef Math_Define
+
+
+// Арена
+//
+
+typedef struct ArenaTag
+{
+    void* Buffer;
+    size_t Offset;
+    size_t Size;
+} Arena;
+
+Arena Arena_Create(size_t size)
+{
+    Arena arena = {0};
+    arena.Buffer = malloc(size);
+    if (arena.Buffer != nil)
+    {
+        arena.Size = size;
+    }
+    return arena;
+}
+
+#define Arena_Push(ARENA, COUNT, TYPE) \
+    (Arena_Alloc(ARENA, COUNT, sizeof(TYPE), _Alignof(TYPE)))
+
+void* Arena_Alloc(Arena* arena, size_t itemCount, size_t itemSize, size_t alignSize)
+{
+    assert(arena != nil && "Arena_Alloc: Arena pointer must be initialized");
+    assert(itemCount > 0 && "Arena_Alloc: Item count must be non negative");
+    assert(itemSize > 0 && "Arena_Alloc: Item size must be non negative");
+
+    // Проверка что `alignSize` в степени 2
+    if (alignSize == 0 && (alignSize & (alignSize - 1)) == 1)
+    {
+        return nil;
+    }
+
+    uintptr_t allocationSize = itemCount * itemSize;
+
+    // Проверка на overflow `allocationSize`
+    // ДЕЛА проверять до, а не после (см. умного чела от gcc)
+    if (allocationSize < itemSize)
+    {
+        return nil;
+    }
+
+    uintptr_t totalOffset = (uintptr_t)arena->Buffer + (uintptr_t)arena->Offset;
+
+    // то же самое, что и totalOffset % alignSize, но быстрее
+    uintptr_t padding = (~totalOffset + 1) & (alignSize - 1);
+
+    totalOffset += padding;
+
+    // Проверка на вместимость
+    if (totalOffset + allocationSize > (uintptr_t)arena->Buffer + (uintptr_t)arena->Size)
+    {
+        return nil;
+    }
+
+    arena->Offset += padding;
+    arena->Offset += allocationSize;
+
+    void* object = (void*)totalOffset;
+    memset(object, 0, allocationSize);
+    return object;
+}
+
+void Arena_Reset(Arena* arena)
+{
+    arena->Offset = 0;
+    memset(arena->Buffer, 0, arena->Size);
+}
+
+void Arena_Free(Arena* arena)
+{
+    arena->Offset = 0;
+    arena->Size = 0;
+    free(arena->Buffer);
+    arena->Buffer = nil;
+}
 
 
 // Векторы 2D
