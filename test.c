@@ -165,7 +165,7 @@ void TEST_Arena(bool* success)
         goto cleanup;
     }
 
-    int* barN1 = Arena_Push(&arena, 1, int);
+    i32* barN1 = Arena_Push(&arena, 1, i32);
     if (barN1 == nil)
     {
         PRINT_Failed("%s", "Arena_Alloc (int*)", "pointer", "nil", __FILE__, __LINE__);
@@ -173,7 +173,7 @@ void TEST_Arena(bool* success)
         goto cleanup;
     }
 
-    float* barN2 = Arena_Push(&arena, 1, float);
+    f32* barN2 = Arena_Push(&arena, 1, f32);
     if (barN2 == nil)
     {
         PRINT_Failed("%s", "Arena_Alloc (float*)", "pointer", "nil", __FILE__, __LINE__);
@@ -202,6 +202,15 @@ void TEST_Arena(bool* success)
     {
         PRINT_Failed("%zu", "Arena_Reset (arena.Offset == 0)",
                      (size_t)0, arena.Offset, __FILE__, __LINE__);
+        *success = false;
+        goto cleanup;
+    }
+
+    foo = Arena_Push(&arena, 18446744073709551615U, i32);
+    if (foo != nil)
+    {
+        PRINT_Failed("%s", "Arena_Push (overflow)",
+                     "nil", "object", __FILE__, __LINE__);
         *success = false;
         goto cleanup;
     }

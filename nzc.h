@@ -1,7 +1,7 @@
 #ifndef NZC_NZC_H
 #define NZC_NZC_H
 
-/* Nikita Zuev Common Code Library v0.2.0
+/* Nikita Zuev Common Code Library v0.2.1
  * ======================================
  */
 
@@ -15,6 +15,7 @@
 #include <math.h>
 #include <memory.h>
 #include <string.h>
+#include <stdckdint.h>
 
 
 
@@ -134,11 +135,8 @@ void* Arena_Alloc(Arena* arena, size_t itemCount, size_t itemSize, size_t alignS
         return nil;
     }
 
-    uintptr_t allocationSize = itemCount * itemSize;
-
-    // Проверка на overflow `allocationSize`
-    // ДЕЛА проверять до, а не после (см. умного чела от gcc)
-    if (allocationSize < itemSize)
+    uintptr_t allocationSize;
+    if (ckd_mul(&allocationSize, itemCount, itemSize))
     {
         return nil;
     }
