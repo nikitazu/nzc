@@ -1,7 +1,7 @@
 #ifndef NZC_NZC_H
 #define NZC_NZC_H
 
-/* Nikita Zuev Common Code Library v0.2.1
+/* Nikita Zuev Common Code Library v0.2.2
  * ======================================
  */
 
@@ -10,7 +10,6 @@
 //
 
 #include <assert.h>
-#include <limits.h>
 #include <malloc.h>
 #include <math.h>
 #include <memory.h>
@@ -25,6 +24,7 @@
 #ifndef NZC_NZC_H__COMMON_TYPES
 #define NZC_NZC_H__COMMON_TYPES
 
+#include <limits.h>
 #include <stdint.h>
 #include <stdbool.h>
 
