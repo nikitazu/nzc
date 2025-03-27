@@ -5,12 +5,13 @@
 #define PRINT(FMT, ARGS...) (fprintf(stderr, FMT "\n", ARGS))
 
 
-#define PRINT_Failed(FMT, OP, E, A, F, L)                               \
+#define PRINT_Failed(FMT, OP, E, A)                                     \
     fprintf(stderr,                                                     \
             "Error: %s failed\n"                                        \
             "  expected " FMT "\n"                                      \
-            "  got " FMT " at %s:%d\n\n",                               \
-            OP, E, A, F, L);
+            "  got " FMT "\n"                                           \
+            "  at %s:%d\n\n",                                           \
+            OP, E, A, __FILE__, __LINE__);
 
 #define PRINT_Vec2Failed(FMT, OP, E, A, F, L)                           \
     fprintf(stderr,                                                     \
@@ -26,7 +27,7 @@
         T##_ClampAssign(&r, VMIN, VMAX);                                \
         success = (r == VMIN);                                          \
         if (!success) {                                                 \
-            PRINT_Failed(T##_FMT, "Clamp", e, r, __FILE__, __LINE__);   \
+            PRINT_Failed(T##_FMT, "Clamp", e, r);                      \
         }                                                               \
     }
 
@@ -101,14 +102,14 @@ void TEST_Arena(bool* success)
 
     if (arena.Buffer == nil)
     {
-        PRINT_Failed("%s", "Arena_Create", "arena.Buffer", "nil", __FILE__, __LINE__);
+        PRINT_Failed("%s", "Arena_Create", "arena.Buffer", "nil");
         *success = false;
         return;
     }
 
     if (arena.Size == 0)
     {
-        PRINT_Failed("%s", "Arena_Create", "arena.Size", "0", __FILE__, __LINE__);
+        PRINT_Failed("%s", "Arena_Create", "arena.Size", "0");
         *success = false;
         return;
     }
@@ -116,7 +117,7 @@ void TEST_Arena(bool* success)
     char* buffer = Arena_Push(&arena, 255, char); // TODO cast inside macro
     if (buffer == nil)
     {
-        PRINT_Failed("%s", "Arena_Alloc (char* buffer)", "pointer", "nil", __FILE__, __LINE__);
+        PRINT_Failed("%s", "Arena_Alloc (char* buffer)", "pointer", "nil");
         *success = false;
         goto cleanup;
     }
@@ -124,7 +125,7 @@ void TEST_Arena(bool* success)
     char* foo = Arena_Push(&arena, 100, char);
     if (foo == nil)
     {
-        PRINT_Failed("%s", "Arena_Alloc (char foo[100])", "pointer", "nil", __FILE__, __LINE__);
+        PRINT_Failed("%s", "Arena_Alloc (char foo[100])", "pointer", "nil");
         *success = false;
         goto cleanup;
     }
@@ -134,7 +135,7 @@ void TEST_Arena(bool* success)
 
     if (strcmp(buffer, "`ma string!`") != 0)
     {
-        PRINT_Failed("%s", "Arena_Alloc (sprintf)", "`ma string!`", buffer, __FILE__, __LINE__);
+        PRINT_Failed("%s", "Arena_Alloc (sprintf)", "`ma string!`", buffer);
         *success = false;
         goto cleanup;
     }
@@ -142,7 +143,7 @@ void TEST_Arena(bool* success)
     foo = Arena_Push(&arena, 50, char);
     if (foo == nil)
     {
-        PRINT_Failed("%s", "Arena_Alloc (char foo[50])", "pointer", "nil", __FILE__, __LINE__);
+        PRINT_Failed("%s", "Arena_Alloc (char foo[50])", "pointer", "nil");
         *success = false;
         goto cleanup;
     }
@@ -152,7 +153,7 @@ void TEST_Arena(bool* success)
 
     if (strcmp(buffer, "`no ma string!`") != 0)
     {
-        PRINT_Failed("%s", "Arena_Alloc (sprintf)", "`no ma string!`", buffer, __FILE__, __LINE__);
+        PRINT_Failed("%s", "Arena_Alloc (sprintf)", "`no ma string!`", buffer);
         *success = false;
         goto cleanup;
     }
@@ -160,7 +161,7 @@ void TEST_Arena(bool* success)
     foo = Arena_Push(&arena, 10, char);
     if (foo == nil)
     {
-        PRINT_Failed("%s", "Arena_Alloc (char foo[10])", "pointer", "nil", __FILE__, __LINE__);
+        PRINT_Failed("%s", "Arena_Alloc (char foo[10])", "pointer", "nil");
         *success = false;
         goto cleanup;
     }
@@ -168,7 +169,7 @@ void TEST_Arena(bool* success)
     i32* barN1 = Arena_Push(&arena, 1, i32);
     if (barN1 == nil)
     {
-        PRINT_Failed("%s", "Arena_Alloc (int*)", "pointer", "nil", __FILE__, __LINE__);
+        PRINT_Failed("%s", "Arena_Alloc (int*)", "pointer", "nil");
         *success = false;
         goto cleanup;
     }
@@ -176,7 +177,7 @@ void TEST_Arena(bool* success)
     f32* barN2 = Arena_Push(&arena, 1, f32);
     if (barN2 == nil)
     {
-        PRINT_Failed("%s", "Arena_Alloc (float*)", "pointer", "nil", __FILE__, __LINE__);
+        PRINT_Failed("%s", "Arena_Alloc (float*)", "pointer", "nil");
         *success = false;
         goto cleanup;
     }
@@ -190,8 +191,7 @@ void TEST_Arena(bool* success)
     if (strcmp(buffer, "s: howdy! d: 123 f: 0.456000") != 0)
     {
         PRINT_Failed("%s", "Arena_Alloc (sprintf)",
-                     "s: howdy! d: 123 f: 0.456", buffer,
-                     __FILE__, __LINE__);
+                      "s: howdy! d: 123 f: 0.456", buffer);
         *success = false;
         goto cleanup;
     }
@@ -201,7 +201,7 @@ void TEST_Arena(bool* success)
     if (arena.Offset > 0)
     {
         PRINT_Failed("%zu", "Arena_Reset (arena.Offset == 0)",
-                     (size_t)0, arena.Offset, __FILE__, __LINE__);
+                     (size_t)0, arena.Offset);
         *success = false;
         goto cleanup;
     }
@@ -210,13 +210,115 @@ void TEST_Arena(bool* success)
     if (foo != nil)
     {
         PRINT_Failed("%s", "Arena_Push (overflow)",
-                     "nil", "object", __FILE__, __LINE__);
+                     "nil", "object");
         *success = false;
         goto cleanup;
     }
 
 cleanup:
     Arena_Free(&arena);
+}
+
+
+void TEST_String(bool* success)
+{
+    const char* testString = "test";
+    String s = String_FromChars(testString);
+
+    if (s.Str != testString)
+    {
+        PRINT_Failed("%s", "String_FromChars (.Str)", testString, s.Str);
+        *success = false;
+    }
+
+    if (s.Length != strlen(testString))
+    {
+        PRINT_Failed("%s", "String_FromChars (.Length)", testString, s.Str);
+        *success = false;
+    }
+
+    char tmp[100];
+    if (!String_CopyTo(s, tmp, 100))
+    {
+        PRINT_Failed("%s", "String_CopyTo (return value)", "true", "false");
+        *success = false;
+    }
+
+    if (strcmp(s.Str, tmp) != 0)
+    {
+        PRINT_Failed("%s", "String_CopyTo (dest)", s.Str, tmp);
+        *success = false;
+    }
+
+    if (!String_EqualChars(s, tmp))
+    {
+        PRINT_Failed("%s", "String_EqualChars", s.Str, tmp);
+        *success = false;
+    }
+
+    if (String_EqualChars(s, nil))
+    {
+        PRINT_Failed("%s", "String_EqualChars (nil)", "false", "true");
+        *success = false;
+    }
+
+    String tmps = String_FromChars(tmp);
+    if (!String_Equal(s, tmps))
+    {
+        PRINT_Failed("%s", "String_Equal", s.Str, tmps.Str);
+        *success = false;
+    }
+
+    if (!str_IsPositiveInt32("123456789"))
+    {
+        PRINT_Failed("%s", "str_IsPositiveInt32 (123456789)", "true", "false");
+        *success = false;
+    }
+
+    if (str_IsPositiveInt32("-123456789"))
+    {
+        PRINT_Failed("%s", "str_IsPositiveInt32 (-123456789)", "false", "true");
+        *success = false;
+    }
+
+    if (str_IsPositiveInt32("abc"))
+    {
+        PRINT_Failed("%s", "str_IsPositiveInt32 (abc)", "false", "true");
+        *success = false;
+    }
+
+    if (str_IsPositiveInt32(""))
+    {
+        PRINT_Failed("%s", "str_IsPositiveInt32 (empty)", "false", "true");
+        *success = false;
+    }
+
+    if (str_IsPositiveInt32(nil))
+    {
+        PRINT_Failed("%s", "str_IsPositiveInt32 (nil)", "false", "true");
+        *success = false;
+    }
+
+    char* match = str_SearchIgnoreCase("foo", "foo");
+    if (strcmp(match, "foo") != 0)
+    {
+        PRINT_Failed("%s", "str_SearchIgnoreCase (foo, f)", "foo", match);
+        *success = false;
+    }
+
+    match = str_SearchIgnoreCase("foo", "o");
+    if (strcmp(match, "oo") != 0)
+    {
+        PRINT_Failed("%s", "str_SearchIgnoreCase (foo, o)", "oo", match);
+        *success = false;
+    }
+
+    match = str_SearchIgnoreCase("foo", "x");
+    if (match != nil)
+    {
+        PRINT_Failed("%s", "str_SearchIgnoreCase (foo, x)", "nil", match);
+        *success = false;
+    }
 }
 
 
@@ -241,6 +343,7 @@ i32 main(i32 argc, const char** args)
     TEST_Vec2(Vec2u64, 15, 20, 05, 10);
 
     TEST_Arena(&success);
+    TEST_String(&success);
 
     if (success)
     {

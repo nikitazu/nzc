@@ -1,7 +1,7 @@
 #ifndef NZC_NZC_H
 #define NZC_NZC_H
 
-/* Nikita Zuev Common Code Library v0.2.2
+/* Nikita Zuev Common Code Library v0.3.0
  * ======================================
  */
 
@@ -10,6 +10,7 @@
 //
 
 #include <assert.h>
+#include <ctype.h>
 #include <malloc.h>
 #include <math.h>
 #include <memory.h>
@@ -281,6 +282,95 @@ typedef Vec2u64 ulvec2;
 
 #define Vec2_Equal(A, B) \
     ((A.X == B.X) && (A.Y == B.Y))
+
+
+// Строки
+//
+
+typedef struct String
+{
+    size_t Length;
+    const char* Str;
+} String;
+
+
+String String_FromChars(const char* str)
+{
+    size_t len = str == nil ? 0 : strlen(str);
+    return (String){ .Length = len, .Str = str };
+}
+
+bool String_CopyTo(String source, char* dest, size_t destLength)
+{
+    errno_t err = strncpy_s(dest, destLength, source.Str, source.Length);
+    return err == 0;
+}
+
+bool String_Equal(String a, String b)
+{
+    if (a.Str == b.Str) { return true; }
+    if (a.Length != b.Length) { return false; }
+    if (a.Str == nil) { return false; }
+    if (b.Str == nil) { return false; }
+    return strcmp(a.Str, b.Str) == 0;
+}
+
+bool String_EqualChars(String s, const char* str)
+{
+    if (s.Str == str) { return true; }
+    if (s.Str == nil) { return false; }
+    if (str == nil) { return false; }
+    return strcmp(s.Str, str) == 0;
+}
+
+bool str_IsPositiveInt32(const char* s)
+{
+    if (s == nil) { return false; }
+    if (*s == '\0') { return false; }
+    const i32 limit = 9;
+    i32 i = 0;
+    char c;
+    for (i = 0, c = s[i]; c != '\0'; i++, c = s[i])
+    {
+        if (!isdigit(c)) { return false; }
+        if (i == limit) { return false; }
+    }
+    return true;
+}
+
+char* str_SearchIgnoreCase(const char* haystack, const char* needle)
+{
+    if (haystack == nil || needle == nil || *needle == '\0')
+    {
+        return nil;
+    }
+
+    for (const char* hs = haystack; *hs; hs++)
+    {
+        const char* h = hs;
+        const char* n = needle;
+        bool match = true;
+
+        for (;;)
+        {
+            if (*n == '\0') { break; }
+            if (*h == '\0') { match = false; break; }
+
+            unsigned char ch = (unsigned char)*h;
+            unsigned char cn = (unsigned char)*n;
+            if (tolower(ch) != tolower(cn)) { match = false; break; }
+
+            h++;
+            n++;
+        }
+
+        if (match)
+        {
+            return (char*)hs;
+        }
+    }
+    return nil;
+}
 
 
 #endif // NZC_NZC_H
