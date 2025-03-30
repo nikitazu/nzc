@@ -319,6 +319,18 @@ void TEST_String(bool* success)
         PRINT_Failed("%s", "str_SearchIgnoreCase (foo, x)", "nil", match);
         *success = false;
     }
+
+    {
+        const char* input1 = "abcdefg";
+        const char* input2 = "123abcd456";
+        String substr1 = { .Str = input1, .Length = 3 };
+        String substr2 = { .Str = input2 + 3, .Length = 3 };
+        if (!String_Equal(substr1, substr2))
+        {
+            PRINT_Failed("%s", "String_Equal (substr1, substr2)", "true", "false");
+            *success = false;
+        }
+    }
 }
 
 

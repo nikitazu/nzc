@@ -1,7 +1,7 @@
 #ifndef NZC_NZC_H
 #define NZC_NZC_H
 
-/* Nikita Zuev Common Code Library v0.3.0
+/* Nikita Zuev Common Code Library v0.3.1
  * ======================================
  */
 
@@ -312,7 +312,7 @@ bool String_Equal(String a, String b)
     if (a.Length != b.Length) { return false; }
     if (a.Str == nil) { return false; }
     if (b.Str == nil) { return false; }
-    return strcmp(a.Str, b.Str) == 0;
+    return memcmp(a.Str, b.Str, a.Length) == 0;
 }
 
 bool String_EqualChars(String s, const char* str)
