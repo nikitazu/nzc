@@ -1,7 +1,7 @@
 #ifndef NZC_NZC_H
 #define NZC_NZC_H
 
-/* Nikita Zuev Common Code Library v0.3.1
+/* Nikita Zuev Common Code Library v0.4.0
  * ======================================
  */
 
@@ -80,14 +80,14 @@ typedef double f64;
 //
 
 #define Math_Define(T)                                  \
-    inline T T##_Clamp(T v, T vmin, T vmax)              \
+    inline T T##_Clamp(T v, T vmin, T vmax)             \
     {                                                   \
         return v < vmin ? vmin : (v > vmax ? vmax : v); \
     }                                                   \
                                                         \
-    inline void T##_ClampAssign(T* v, T vmin, T vmax)    \
+    inline void T##_ClampAssign(T* v, T vmin, T vmax)   \
     {                                                   \
-        *v = T##_Clamp(*v, vmin, vmax);                  \
+        *v = T##_Clamp(*v, vmin, vmax);                 \
     }
 
 Math_Define(i32);
@@ -278,10 +278,6 @@ typedef Vec2u64 ulvec2;
 #define Vec2i64_FMT "{%lld;%lld}"
 #define Vec2u32_FMT "{%i;%i}"
 #define Vec2u64_FMT "{%lld;%lld}"
-
-
-#define Vec2_Equal(A, B) \
-    ((A.X == B.X) && (A.Y == B.Y))
 
 
 // Строки

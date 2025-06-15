@@ -43,7 +43,7 @@
         e.Y = Y0 + Y1;                          \
         r = T##_Add(a, b);                      \
                                                 \
-        success = Vec2_Equal(r, e);                                     \
+        success = T##_Eq(r, e);                                         \
         if (!success) {                                                 \
             PRINT_Vec2Failed(T##_FMT, "Vec2_Add", e, r, __FILE__, __LINE__); \
         }                                                               \
@@ -52,7 +52,7 @@
         e.Y = Y0 - Y1;                                                  \
         r = T##_Sub(a, b);                                              \
                                                                         \
-        success = Vec2_Equal(r, e);                                     \
+        success = T##_Eq(r, e);                                         \
         if (!success) {                                                 \
             PRINT_Vec2Failed(T##_FMT, "Vec2_Sub", e, r, __FILE__, __LINE__); \
         }                                                               \
@@ -61,7 +61,7 @@
         e.Y = Y0 * Y1;                                                  \
         r = T##_Mul(a, b);                                              \
                                                                         \
-        success = Vec2_Equal(r, e);                                     \
+        success = T##_Eq(r, e);                                         \
         if (!success) {                                                 \
             PRINT_Vec2Failed(T##_FMT, "Vec2_Mul", e, r, __FILE__, __LINE__); \
         }                                                               \
@@ -70,7 +70,7 @@
         e.Y = Y0 / Y1;                                                  \
         r = T##_Div(a, b);                                              \
                                                                         \
-        success = Vec2_Equal(r, e);                                     \
+        success = T##_Eq(r, e);                                         \
         if (!success) {                                                 \
             PRINT_Vec2Failed(T##_FMT, "Vec2_Div", e, r, __FILE__, __LINE__); \
         }                                                               \
@@ -79,7 +79,7 @@
         e.Y = Y0 * X1;                                                  \
         r = T##_Scale(a, b.X);                                          \
                                                                         \
-        success = Vec2_Equal(r, e);                                     \
+        success = T##_Eq(r, e);                                         \
         if (!success) {                                                 \
             PRINT_Vec2Failed(T##_FMT, "Vec2_Scale", e, r, __FILE__, __LINE__); \
         }                                                               \
@@ -89,7 +89,7 @@
         r = a;                                                          \
         T##_ScaleAssign(&r, b.X);                                       \
                                                                         \
-        success = Vec2_Equal(r, e);                                     \
+        success = T##_Eq(r, e);                                         \
         if (!success) {                                                 \
             PRINT_Vec2Failed(T##_FMT, "Vec2_ScaleAssign", e, r, __FILE__, __LINE__); \
         }                                                               \
