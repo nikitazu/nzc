@@ -1,7 +1,7 @@
 #ifndef NZC_NZC_H
 #define NZC_NZC_H
 
-/* Nikita Zuev Common Code Library v0.4.0
+/* Nikita Zuev Common Code Library v0.5.0
  * ======================================
  */
 
