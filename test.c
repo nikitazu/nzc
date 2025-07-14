@@ -220,6 +220,99 @@ cleanup:
 }
 
 
+void TEST_ChildArena(bool* success)
+{
+    Arena arena = Arena_Create(KB(10));
+    assert(arena.Buffer != nil && "Failed to create parent arena");
+
+    i32* num = Arena_Push(&arena, 1, i32);
+    assert(num != nil && "Failed to push i32");
+
+    *num = 4;
+
+    Arena* ca1 = Arena_CreateChild(&arena, KB(3));
+    Arena* ca2 = Arena_CreateChild(&arena, KB(3));
+    Arena* ca3 = Arena_CreateChild(&arena, KB(5));
+
+    if (*num != 4)
+    {
+        PRINT_Failed("%d", "ChildArena (number was corrupted)",
+                     *num, 4);
+        *success = false;
+        goto cleanup;
+    }
+
+    if (ca1 == nil)
+    {
+        PRINT_Failed("%s", "Arena_CreateChild (normal size 1)",
+                     "pointer", "nil");
+        *success = false;
+        goto cleanup;
+    }
+
+    if (ca2 == nil)
+    {
+        PRINT_Failed("%s", "Arena_CreateChild (normal size 2)",
+                     "pointer", "nil");
+        *success = false;
+        goto cleanup;
+    }
+
+    if (ca3 != nil)
+    {
+        PRINT_Failed("%s", "Arena_CreateChild (too big size 3)",
+                     "nil", "pointer");
+        *success = false;
+        goto cleanup;
+    }
+
+    f32* numbers1 = Arena_Push(ca1, 10, f32);
+    if (numbers1 == nil)
+    {
+        PRINT_Failed("%s", "ChildArena (push 10 f32 into ca1)",
+                     "pointer", "nil");
+        *success = false;
+        goto cleanup;
+    }
+
+    f32* numbers2 = Arena_Push(ca2, 10, f32);
+    if (numbers2 == nil)
+    {
+        PRINT_Failed("%s", "ChildArena (push 10 f32 into ca2)",
+                     "pointer", "nil");
+        *success = false;
+        goto cleanup;
+    }
+
+    for (i32 i = 0; i < 10; i++)
+    {
+        numbers1[i] = i * 2.f;
+        numbers2[i] = i * 3.f;
+    }
+
+    for (i32 i = 0; i < 10; i++)
+    {
+        if (numbers1[i] != i * 2.f)
+        {
+            PRINT_Failed("%f", "ChildArena (ca1 number corrupted)",
+                         i * 2.f, numbers1[i]);
+            *success = false;
+            goto cleanup;
+        }
+        if (numbers2[i] != i * 3.f)
+        {
+            PRINT_Failed("%f", "ChildArena (ca2 number corrupted)",
+                         i * 2.f, numbers1[i]);
+            *success = false;
+            goto cleanup;
+        }
+    }
+
+cleanup:
+    Arena_Free(&arena);
+}
+
+
 void TEST_String(bool* success)
 {
     const char* testString = "test";
@@ -355,6 +448,7 @@ i32 main(i32 argc, const char** args)
     TEST_Vec2(Vec2u64, 15, 20, 05, 10);
 
     TEST_Arena(&success);
+    TEST_ChildArena(&success);
     TEST_String(&success);
 
     if (success)

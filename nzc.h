@@ -177,6 +177,18 @@ void Arena_Free(Arena* arena)
     arena->Buffer = nil;
 }
 
+Arena* Arena_CreateChild(Arena* parent, size_t size)
+{
+    assert(parent != nil && "Arena_CreateChild: Parent arena pointer must be initialized");
+    Arena* child = Arena_Push(parent, 1, Arena);
+    if (child == nil) { return nil; }
+    u8* buffer = Arena_Push(parent, size, u8);
+    if (buffer == nil) { return nil; } // TODO free child
+    child->Buffer = buffer;
+    child->Offset = 0;
+    child->Size = size;
+    return child;
+}
 
 // Векторы 2D
 //
@@ -367,6 +379,5 @@ char* str_SearchIgnoreCase(const char* haystack, const char* needle)
     }
     return nil;
 }
-
 
 #endif // NZC_NZC_H
