@@ -363,6 +363,34 @@ void TEST_String(bool* success)
         *success = false;
     }
 
+    i32 compareResult = str_Compare(nil, 0, nil, 0);
+    if (compareResult != 0)
+    {
+        PRINT_Failed("%d", "str_Compare(nil, 0, nil, 0)", 0, compareResult);
+        *success = false;
+    }
+
+    compareResult = str_Compare(nil, 1, nil, 1);
+    if (compareResult != 0)
+    {
+        PRINT_Failed("%d", "str_Compare(nil, 1, nil, 1)", 0, compareResult);
+        *success = false;
+    }
+
+    compareResult = str_Compare("a", 1, nil, 0);
+    if (compareResult != -1)
+    {
+        PRINT_Failed("%d", "str_Compare('a', 1, nil, 0)", -1, compareResult);
+        *success = false;
+    }
+
+    compareResult = str_Compare(nil, 0, "a", 1);
+    if (compareResult != 1)
+    {
+        PRINT_Failed("%d", "str_Compare(nil, 0, 'a', 1)", 1, compareResult);
+        *success = false;
+    }
+
     if (!str_IsPositiveInt32("123456789"))
     {
         PRINT_Failed("%s", "str_IsPositiveInt32 (123456789)", "true", "false");

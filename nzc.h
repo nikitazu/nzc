@@ -1,7 +1,7 @@
 #ifndef NZC_NZC_H
 #define NZC_NZC_H
 
-/* Nikita Zuev Common Code Library v0.8.0
+/* Nikita Zuev Common Code Library v0.8.1
  * ======================================
  */
 
@@ -343,6 +343,9 @@ bool String_Equal(String a, String b)
 i32 str_Compare(const char* s1, size_t len1,
                 const char* s2, size_t len2)
 {
+    if (s1 == s2) { return 0; }
+    if (s1 == nil && s2 != nil) { return 1; }
+    if (s2 == nil && s1 != nil) { return -1; }
     for (i32 i = 0; i < len1 && i < len2; i++)
     {
         if (s1[i] > s2[i]) { return 1; }
