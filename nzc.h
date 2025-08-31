@@ -1,7 +1,7 @@
 #ifndef NZC_NZC_H
 #define NZC_NZC_H
 
-/* Nikita Zuev Common Code Library v0.5.0
+/* Nikita Zuev Common Code Library v0.7.0
  * ======================================
  */
 
@@ -16,6 +16,7 @@
 #include <memory.h>
 #include <string.h>
 #include <stdckdint.h>
+#include <stddef.h>
 
 
 
@@ -74,6 +75,22 @@ typedef double f64;
 #define UNUSED(x) (void)(x)
 #define NAMEOF(x) (#x)
 #define KB(x) (x * 1024)
+
+
+// Хитрый макрос линуксоидов
+// (версия не требующая GCC или CLANG)
+//
+#ifndef NZC_CONTAINER_OF
+/**
+ * Кастует некий указатель на структуру PTR к типу TYPE,
+ * сдвигая его на расстояние до члена структуры MEMBER.
+ * @PTR    указатель на структуру типа TYPE
+ * @TYPE   тип, к которому приводим указатель PTR
+ * @MEMBER член структуры, содержащий указатель на PTR
+ */
+#define NZC_CONTAINER_OF(PTR, TYPE, MEMBER)             \
+    ((TYPE *) ((char *)(PTR) - offsetof(TYPE, MEMBER)))
+#endif // NZC_CONTAINER_OF
 
 
 // Простая математика
@@ -379,5 +396,213 @@ char* str_SearchIgnoreCase(const char* haystack, const char* needle)
     }
     return nil;
 }
+
+
+#ifndef NZC_DOUBLY_LINKED_LIST_H
+#define NZC_DOUBLY_LINKED_LIST_H
+
+
+struct DLNode;
+typedef struct DLNode DLNode;
+
+/**
+ * Узел двое-связанного списка.
+ * @Next указатель на следующий узел списка
+ * @Prev указатель на предыдущий узел списка
+ *
+ * Структура списка такова, что первый узел является
+ * корневым, он не содержит данные и используется
+ * для идентификации списка, передачи его в функции,
+ * а также обозначения начала и конца.
+ *
+ * Список лишь из одного корневого узла - это пустой список,
+ * его указатели Next и Prev замкнуты на самого себя.
+ */
+struct DLNode
+{
+    DLNode* Next;
+    DLNode* Prev;
+};
+
+void DLNode_Init(DLNode* item);
+void DLNode_Prepend(DLNode* item, DLNode* toList);
+void DLNode_Append(DLNode* item, DLNode* toList);
+void DLNode_Remove(DLNode* item);
+void DLNode_MovePrepend(DLNode* item, DLNode* toList);
+void DLNode_MoveAppend(DLNode* item, DLNode* toList);
+bool DLNode_IsEmpty(DLNode* item);
+void DLNode_Concat(DLNode* list1, DLNode* list2);
+
+
+#ifndef DL_EACH
+#define DL_EACH(TYPE, IT, LIST, MEMBER)                                 \
+    for (TYPE* IT = NZC_CONTAINER_OF((&(LIST)->MEMBER)->Next, TYPE, MEMBER); \
+         &IT->MEMBER != &((LIST)->MEMBER);                              \
+         IT = NZC_CONTAINER_OF(IT->MEMBER.Next, TYPE, MEMBER))
+#endif // DL_EACH
+
+
+#ifdef DOUBLY_LINKED_LIST_IMPLEMENTATION
+
+
+void DLNode_Init(DLNode* item)
+{
+    item->Next = item;
+    item->Prev = item;
+}
+
+static void i_DLNode_InsertBetween(DLNode* item, DLNode* prev, DLNode* next)
+{
+    // ... prev >     < next ...
+    //          | new |
+    //
+    item->Next = next;
+    item->Prev = prev;
+    next->Prev = item;
+    prev->Next = item;
+}
+
+void DLNode_Prepend(DLNode* item, DLNode* toList)
+{
+    // +------------------------------------------+
+    // |                                          |
+    // +- list -> <- x1 -> <- x2 -> .. <- xn -> <-+
+    //           ^
+    //           x0
+    //
+    DLNode* prev = toList;
+    DLNode* next = toList->Next;
+    i_DLNode_InsertBetween(item, prev, next);
+}
+
+void DLNode_Append(DLNode* item, DLNode* toList)
+{
+    // +---------------------------------------+
+    // |                                       |
+    // +- list -> <- x1 -> <- x2 -> <- xn -> <-+
+    //                                      ^
+    //                                      xn+1
+    //
+    DLNode* prev = toList->Prev;
+    DLNode* next = toList;
+    i_DLNode_InsertBetween(item, prev, next);
+}
+
+static void i_DLNode_EraseBetween(DLNode* prev, DLNode* next)
+{
+    prev->Next = next;
+    next->Prev = prev;
+}
+
+void DLNode_Remove(DLNode* item)
+{
+    i_DLNode_EraseBetween(item->Prev, item->Next);
+    item->Next = item;
+    item->Prev = item;
+}
+
+void DLNode_MovePrepend(DLNode* item, DLNode* toList)
+{
+    i_DLNode_EraseBetween(item->Prev, item->Next);
+    DLNode_Prepend(item, toList);
+}
+
+void DLNode_MoveAppend(DLNode* item, DLNode* toList)
+{
+    i_DLNode_EraseBetween(item->Prev, item->Next);
+    DLNode_Append(item, toList);
+}
+
+bool DLNode_IsEmpty(DLNode* list)
+{
+    return list == list->Next && list == list->Prev;
+}
+
+void DLNode_Concat(DLNode* list1, DLNode* list2)
+{
+    DLNode* last1  = list1->Prev;
+    DLNode* first2 = list2->Next;
+    DLNode* last2  = list2->Prev;
+
+    last1->Next  = first2;
+    first2->Prev = last1;
+
+    last2->Next = list1;
+    list1->Prev = last2;
+
+    DLNode_Init(list2);
+}
+
+#endif // DOUBLY_LINKED_LIST_IMPLEMENTATION
+
+#endif // NZC_DOUBLY_LINKED_LIST_H
+
+
+
+#ifndef NZC_BINARY_SEARCH_TREE_LIST_H
+#define NZC_BINARY_SEARCH_TREE_LIST_H
+
+typedef struct BST BST;
+
+struct BST
+{
+    BST* Left;
+    BST* Right;
+};
+
+typedef enum BSTResultType
+{
+    BSTResultType_MatchThis = 0,
+    BSTResultType_EmptyLeft,
+    BSTResultType_EmptyRight,
+} BSTResultType;
+
+typedef struct BSTResult
+{
+    BST*          Node;
+    BSTResultType Type;
+} BSTResult;
+
+// TODO this is left recursion, rewrite as iteration
+BSTResult BST_FindInt32(BST* t, size_t keyOffset, i32 key)
+{
+    BSTResult result = { .Node = t, .Type = BSTResultType_MatchThis };
+    const i32 thisKey = *(i32*)(((void*)t) + keyOffset);
+    if (key < thisKey)
+    {
+        if (t->Left == nil)
+        {
+            result.Type = BSTResultType_EmptyLeft;
+            return result;
+        }
+        return BST_FindInt32(t->Left, keyOffset, key);
+    }
+    if (key > thisKey)
+    {
+        if (t->Right == nil)
+        {
+            result.Type = BSTResultType_EmptyRight;
+            return result;
+        }
+        return BST_FindInt32(t->Right, keyOffset, key);
+    }
+    return result;
+}
+
+
+typedef void (*BST_WalkProc)(BST* it, void* accum);
+void BST_WalkInOrder(BST* t, void* accum, BST_WalkProc proc)
+{
+    if (t == nil) { return; }
+    BST_WalkInOrder(t->Left, accum, proc);
+    proc(t, accum);
+    BST_WalkInOrder(t->Right, accum, proc);
+}
+
+// ДЕЛА реализовать нерекурсивный итератор, с использованием стека
+// ДЕЛА заценить RAD debugger
+
+#endif // NZC_BINARY_SEARCH_TREE_LIST_H
+
 
 #endif // NZC_NZC_H

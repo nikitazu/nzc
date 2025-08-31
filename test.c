@@ -1,3 +1,4 @@
+#define DOUBLY_LINKED_LIST_IMPLEMENTATION
 #include "nzc.h"
 #include <stdio.h>
 
@@ -427,6 +428,401 @@ void TEST_String(bool* success)
 }
 
 
+
+// TEST Doubly Linked List
+//
+
+typedef struct IntNode
+{
+    DLNode Node;
+    i32    Value;
+} IntNode;
+
+typedef struct IntList
+{
+    Arena*   Arena;
+    IntNode* Root;
+} IntList;
+
+IntList IntList_Create(Arena* a)
+{
+    IntNode* root = Arena_Push(a, 1, IntNode);
+    DLNode_Init(&root->Node);
+    IntList list = { .Arena = a, .Root = root };
+    return list;
+}
+
+void IntList_Append(IntList list, i32 value)
+{
+    IntNode* item = Arena_Push(list.Arena, 1, IntNode);
+    item->Value = value;
+    DLNode_Init(&item->Node);
+    DLNode_Append(&item->Node, &list.Root->Node);
+}
+
+void TEST_DoublyLinkedListOnArena(bool* success)
+{
+    Arena arena = Arena_Create(KB(10));
+    assert(arena.Buffer != nil && "Failed to create arena");
+
+    IntList a = IntList_Create(&arena);
+    IntList b = IntList_Create(&arena);
+
+    IntList_Append(a, 1);
+    IntList_Append(a, 2);
+    IntList_Append(a, 3);
+
+    IntList_Append(b, 10);
+    IntList_Append(b, 20);
+    IntList_Append(b, 30);
+
+    i32 sum = 0;
+    DL_EACH(IntNode, it, a.Root, Node) {
+        sum += it->Value;
+    }
+
+    if (sum != 6)
+    {
+        PRINT_Failed("%d", "DoublyLinkedList on Arena (sum loop 1)", 6, sum);
+        *success = false;
+        goto cleanup;
+    }
+
+    sum = 0;
+    DL_EACH(IntNode, it, b.Root, Node) {
+        sum += it->Value;
+    }
+
+    if (sum != 60)
+    {
+        PRINT_Failed("%d", "DoublyLinkedList on Arena (sum loop 2)", 60, sum);
+        *success = false;
+        goto cleanup;
+    }
+
+    DLNode_Concat(&a.Root->Node, &b.Root->Node);
+
+    sum = 0;
+    DL_EACH(IntNode, it, a.Root, Node) {
+        sum += it->Value;
+    }
+
+    if (sum != 66)
+    {
+        PRINT_Failed("%d", "DoublyLinkedList on Arena (sum loop 3)", 66, sum);
+        *success = false;
+        goto cleanup;
+    }
+
+cleanup:
+    Arena_Free(&arena);
+}
+
+void TEST_DoublyLinkedListOnStack(bool* success)
+{
+    IntNode aList, bList;
+    IntNode a[3];
+    IntNode b[3];
+
+    DLNode_Init(&aList.Node);
+    DLNode_Init(&bList.Node);
+
+    for (i32 i = 0; i < 3; i++)
+    {
+        DLNode_Init(&a[i].Node);
+        DLNode_Append(&a[i].Node, &aList.Node);
+        a[i].Value = i + 1;
+
+        DLNode_Init(&b[i].Node);
+        DLNode_Append(&b[i].Node, &bList.Node);
+        b[i].Value = (i + 1) * 10;
+    }
+
+    i32 sum = 0;
+    DL_EACH(IntNode, it, &aList, Node) {
+        sum += it->Value;
+    }
+
+    if (sum != 6)
+    {
+        PRINT_Failed("%d", "DoublyLinkedList on Stack (sum loop 1)", 6, sum);
+        *success = false;
+        goto cleanup;
+    }
+
+    sum = 0;
+    DL_EACH(IntNode, it, &bList, Node) {
+        sum += it->Value;
+    }
+
+    if (sum != 60)
+    {
+        PRINT_Failed("%d", "DoublyLinkedList on Stack (sum loop 2)", 60, sum);
+        *success = false;
+        goto cleanup;
+    }
+
+    DLNode_Concat(&aList.Node, &bList.Node);
+
+    sum = 0;
+    DL_EACH(IntNode, it, &aList, Node) {
+        sum += it->Value;
+    }
+
+    if (sum != 66)
+    {
+        PRINT_Failed("%d", "DoublyLinkedList on Stack (sum loop 3)", 66, sum);
+        *success = false;
+        goto cleanup;
+    }
+
+cleanup:
+    { /* nothing to cleanup */ }
+}
+
+
+// TEST Binary Search Tree
+//
+
+typedef struct IntBst
+{
+    BST Node;
+    i32 Key;
+} IntBst;
+
+typedef struct IntBstSumCheckList
+{
+    i32   Sum;
+    i32   Pos;
+    i32*  Keys;
+    i32   KeyCount;
+    bool  Failed;
+    char* FailedReason;
+} IntBstSumCheckList;
+
+void IntBst_SumTreeInOrder_Callback(BST* it, void* accum)
+{
+    IntBstSumCheckList* checkList = accum;
+    if (checkList->Failed) { return; }
+
+    if (checkList->Pos >= checkList->KeyCount)
+    {
+        checkList->Failed = true;
+        checkList->FailedReason = "position out of bounds";
+        return;
+    }
+
+    IntBst* node = (void*)it;
+    if (checkList->Keys[checkList->Pos] != node->Key)
+    {
+        checkList->Failed = true;
+        checkList->FailedReason = "unexpected key value at position";
+        return;
+    }
+
+    // i32 sum0 = checkList->Sum;
+    checkList->Sum += node->Key;
+    checkList->Pos++;
+
+    // fprintf(stderr, "BST %d + %d = %d\n", sum0, node->Key, checkList->Sum);
+}
+
+void IntBst_SumTreeInOrder(IntBst* t, IntBstSumCheckList* checkList)
+{
+    BST_WalkInOrder(&t->Node, checkList, IntBst_SumTreeInOrder_Callback);
+}
+
+void TEST_BinarySearchTreeOnStack(bool* success)
+{
+    IntBst root = {0};
+    BSTResult r;
+
+    r = BST_FindInt32(&root.Node, offsetof(IntBst, Key), 0);
+
+    if (r.Type != BSTResultType_MatchThis)
+    {
+        PRINT_Failed("%d", "BinarySearchTree on Stack (find 0) result type check",
+                     BSTResultType_MatchThis, r.Type);
+        *success = false;
+        goto cleanup;
+    }
+
+    if (r.Node != &root.Node)
+    {
+        PRINT_Failed("%s", "BinarySearchTree on Stack (find 0) result node check",
+                     "root node", "something else");
+        *success = false;
+        goto cleanup;
+    }
+
+    r = BST_FindInt32(&root.Node, offsetof(IntBst, Key), 5);
+
+    if (r.Type != BSTResultType_EmptyRight)
+    {
+        PRINT_Failed("%d", "BinarySearchTree on Stack (find 5) result type check",
+                     BSTResultType_EmptyRight, r.Type);
+        *success = false;
+        goto cleanup;
+    }
+
+    if (r.Node != &root.Node)
+    {
+        PRINT_Failed("%s", "BinarySearchTree on Stack (find 5) result node check",
+                     "root node", "something else");
+        *success = false;
+        goto cleanup;
+    }
+
+    IntBst n5 = { .Key = 5 };
+    r.Node->Right = &n5.Node;
+
+    r = BST_FindInt32(&root.Node, offsetof(IntBst, Key), 5);
+
+    if (r.Type != BSTResultType_MatchThis)
+    {
+        PRINT_Failed("%d", "BinarySearchTree on Stack (find 5') result type check",
+                     BSTResultType_MatchThis, r.Type);
+        *success = false;
+        goto cleanup;
+    }
+
+    if (r.Node != &n5.Node)
+    {
+        PRINT_Failed("%s", "BinarySearchTree on Stack (find 5') result node check",
+                     "n5 node", "something else");
+        *success = false;
+        goto cleanup;
+    }
+
+    r = BST_FindInt32(&root.Node, offsetof(IntBst, Key), -5);
+
+    if (r.Type != BSTResultType_EmptyLeft)
+    {
+        PRINT_Failed("%d", "BinarySearchTree on Stack (find -5) result type check",
+                     BSTResultType_EmptyRight, r.Type);
+        *success = false;
+        goto cleanup;
+    }
+
+    if (r.Node != &root.Node)
+    {
+        PRINT_Failed("%s", "BinarySearchTree on Stack (find -5) result node check",
+                     "root node", "something else");
+        *success = false;
+        goto cleanup;
+    }
+
+    IntBst n5neg = { .Key = -5 };
+    r.Node->Left = &n5neg.Node;
+
+    r = BST_FindInt32(&root.Node, offsetof(IntBst, Key), -5);
+
+    if (r.Type != BSTResultType_MatchThis)
+    {
+        PRINT_Failed("%d", "BinarySearchTree on Stack (find -5') result type check",
+                     BSTResultType_MatchThis, r.Type);
+        *success = false;
+        goto cleanup;
+    }
+
+    if (r.Node != &n5neg.Node)
+    {
+        PRINT_Failed("%s", "BinarySearchTree on Stack (find -5') result node check",
+                     "n5neg node", "something else");
+        *success = false;
+        goto cleanup;
+    }
+
+    r = BST_FindInt32(&root.Node, offsetof(IntBst, Key), 3);
+
+    if (r.Type != BSTResultType_EmptyLeft)
+    {
+        PRINT_Failed("%d", "BinarySearchTree on Stack (find 3) result type check",
+                     BSTResultType_EmptyRight, r.Type);
+        *success = false;
+        goto cleanup;
+    }
+
+    if (r.Node != &n5.Node)
+    {
+        PRINT_Failed("%s", "BinarySearchTree on Stack (find 3) result node check",
+                     "n5 node", "something else");
+        *success = false;
+        goto cleanup;
+    }
+
+    IntBst n3 = { .Key = 3 };
+    r.Node->Left = &n3.Node;
+
+    r = BST_FindInt32(&root.Node, offsetof(IntBst, Key), 3);
+
+    if (r.Type != BSTResultType_MatchThis)
+    {
+        PRINT_Failed("%d", "BinarySearchTree on Stack (find 3') result type check",
+                     BSTResultType_MatchThis, r.Type);
+        *success = false;
+        goto cleanup;
+    }
+
+    if (r.Node != &n3.Node)
+    {
+        PRINT_Failed("%s", "BinarySearchTree on Stack (find 3') result node check",
+                     "n3 node", "something else");
+        *success = false;
+        goto cleanup;
+    }
+
+    r = BST_FindInt32(&root.Node, offsetof(IntBst, Key), 5);
+
+    if (r.Type != BSTResultType_MatchThis)
+    {
+        PRINT_Failed("%d", "BinarySearchTree on Stack (find 5'') result type check",
+                     BSTResultType_MatchThis, r.Type);
+        *success = false;
+        goto cleanup;
+    }
+
+    if (r.Node != &n5.Node)
+    {
+        PRINT_Failed("%s", "BinarySearchTree on Stack (find 5'') result node check",
+                     "n5 node", "something else");
+        *success = false;
+        goto cleanup;
+    }
+
+    i32 keyList[4] = { -5, 0, 3, 5 };
+    IntBstSumCheckList checkList =
+        {
+            .Sum = 0,
+            .Pos = 0,
+            .Keys = &keyList[0],
+            .KeyCount = 4,
+            .Failed = false,
+        };
+
+    IntBst_SumTreeInOrder(&root, &checkList);
+
+    if (checkList.Failed)
+    {
+        PRINT_Failed("%s", "BinarySearchTree on Stack (sum) checklist check",
+                     "not failed", checkList.FailedReason);
+        *success = false;
+        goto cleanup;
+    }
+
+    if (checkList.Sum != 3)
+    {
+        PRINT_Failed("%d", "BinarySearchTree on Stack (sum) result check",
+                     3, checkList.Sum);
+        *success = false;
+        goto cleanup;
+    }
+
+cleanup:
+    { /* nothing to cleanup */ }
+}
+
+
 i32 main(i32 argc, const char** args)
 {
     PRINT("NZC test start");
@@ -450,6 +846,11 @@ i32 main(i32 argc, const char** args)
     TEST_Arena(&success);
     TEST_ChildArena(&success);
     TEST_String(&success);
+
+    TEST_DoublyLinkedListOnArena(&success);
+    TEST_DoublyLinkedListOnStack(&success);
+
+    TEST_BinarySearchTreeOnStack(&success);
 
     if (success)
     {
