@@ -391,6 +391,20 @@ void TEST_String(bool* success)
         *success = false;
     }
 
+    compareResult = str_Compare("a", 1, "aa", 2);
+    if (compareResult != -1)
+    {
+        PRINT_Failed("%d", "str_Compare('a', 1, 'aa', 2)", -1, compareResult);
+        *success = false;
+    }
+
+    compareResult = str_Compare("aa", 2, "a", 1);
+    if (compareResult != 1)
+    {
+        PRINT_Failed("%d", "str_Compare('aa', 2, 'a', 1)", 1, compareResult);
+        *success = false;
+    }
+
     if (!str_IsPositiveInt32("123456789"))
     {
         PRINT_Failed("%s", "str_IsPositiveInt32 (123456789)", "true", "false");
