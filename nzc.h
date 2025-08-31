@@ -1,7 +1,7 @@
 #ifndef NZC_NZC_H
 #define NZC_NZC_H
 
-/* Nikita Zuev Common Code Library v0.7.0
+/* Nikita Zuev Common Code Library v0.8.0
  * ======================================
  */
 
@@ -340,6 +340,22 @@ bool String_Equal(String a, String b)
     return memcmp(a.Str, b.Str, a.Length) == 0;
 }
 
+i32 str_Compare(const char* s1, size_t len1,
+                const char* s2, size_t len2)
+{
+    for (i32 i = 0; i < len1 && i < len2; i++)
+    {
+        if (s1[i] > s2[i]) { return 1; }
+        if (s1[i] < s2[i]) { return -1; }
+    }
+    return 0;
+}
+
+i32 String_Compare(String a, String b)
+{
+    return str_Compare(a.Str, a.Length, b.Str, b.Length);
+}
+
 bool String_EqualChars(String s, const char* str)
 {
     if (s.Str == str) { return true; }
@@ -585,6 +601,32 @@ BSTResult BST_FindInt32(BST* t, size_t keyOffset, i32 key)
             return result;
         }
         return BST_FindInt32(t->Right, keyOffset, key);
+    }
+    return result;
+}
+
+BSTResult BST_FindString(BST* t, size_t keyOffset, String key)
+{
+    BSTResult result = { .Node = t, .Type = BSTResultType_MatchThis };
+    String thisKey = *(String*)(((void*)t) + keyOffset);
+    i32 compareResult = String_Compare(key, thisKey);
+    if (compareResult < 0)
+    {
+        if (t->Left == nil)
+        {
+            result.Type = BSTResultType_EmptyLeft;
+            return result;
+        }
+        return BST_FindString(t->Left, keyOffset, key);
+    }
+    if (compareResult > 0)
+    {
+        if (t->Right == nil)
+        {
+            result.Type = BSTResultType_EmptyRight;
+            return result;
+        }
+        return BST_FindString(t->Right, keyOffset, key);
     }
     return result;
 }
