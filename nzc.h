@@ -1,7 +1,7 @@
 #ifndef NZC_NZC_H
 #define NZC_NZC_H
 
-/* Nikita Zuev Common Code Library v0.8.1
+/* Nikita Zuev Common Code Library v0.8.2
  * ======================================
  */
 
@@ -327,8 +327,12 @@ String String_FromChars(const char* str)
 
 bool String_CopyTo(String source, char* dest, size_t destLength)
 {
-    errno_t err = strncpy_s(dest, destLength, source.Str, source.Length);
-    return err == 0;
+    if (source.Length + 1 > destLength) { return false; }
+    size_t length = destLength;
+    if (source.Length < destLength) { length = source.Length; }
+    memcpy(dest, source.Str, length);
+    dest[length] = '\0';
+    return true;
 }
 
 bool String_Equal(String a, String b)
@@ -364,7 +368,7 @@ bool String_EqualChars(String s, const char* str)
     if (s.Str == str) { return true; }
     if (s.Str == nil) { return false; }
     if (str == nil) { return false; }
-    return strcmp(s.Str, str) == 0;
+    return memcmp(s.Str, str, s.Length) == 0;
 }
 
 bool str_IsPositiveInt32(const char* s)
