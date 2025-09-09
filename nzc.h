@@ -1,7 +1,7 @@
 #ifndef NZC_NZC_H
 #define NZC_NZC_H
 
-/* Nikita Zuev Common Code Library v0.8.3
+/* Nikita Zuev Common Code Library v0.9.0
  * ======================================
  */
 
@@ -654,6 +654,61 @@ void BST_WalkInOrder(BST* t, void* accum, BST_WalkProc proc)
 // ДЕЛА заценить RAD debugger
 
 #endif // NZC_BINARY_SEARCH_TREE_LIST_H
+
+
+#ifdef NZC_LOG_ENABLED
+#include <time.h>
+
+#ifndef NZC_LOG_FILENAME
+#define NZC_LOG_FILENAME "log.txt"
+#endif // NZC_LOG_FILENAME
+
+typedef struct LogContext
+{
+    FILE* File;
+    time_t Now;
+    struct tm LocalNow;
+    char TimeBuf[255];
+} LogContext;
+
+
+static LogContext G_NZC_Log;
+
+
+#ifdef NZC_LOG_DEBUG
+
+#define LogOpen()         fopen_s(&G_NZC_Log.File, NZC_LOG_FILENAME, "w");
+#define LogClose()        fclose(G_NZC_Log.File);
+#define LogDebug(...)     fprintf(G_NZC_Log.File, "DEBUG: " __VA_ARGS__);
+#define LogDebugMore(...) LogDebug("       " __VA_ARGS__);
+#define LogDebugTime(...)                                               \
+    {                                                                   \
+        errno_t err;                                                    \
+        G_NZC_Log.Now = time(nil);                                      \
+        err = localtime_s(&G_NZC_Log.LocalNow, &G_NZC_Log.Now);         \
+        err = strftime(G_NZC_Log.TimeBuf,                               \
+                       sizeof(G_NZC_Log.TimeBuf),                       \
+                       "[%F %T]",                                       \
+                       &G_NZC_Log.LocalNow);                            \
+        fputs("DEBUG: ", G_NZC_Log.File);                               \
+        fputs(G_NZC_Log.TimeBuf, G_NZC_Log.File);                       \
+        fprintf(G_NZC_Log.File, " " __VA_ARGS__);                       \
+        UNUSED(err);                                                    \
+    }
+
+#else // NZC_LOG_DEBUG
+
+#define LogOpen() ;
+#define LogClose() ;
+#define LogDebug(...) ;
+#define LogDebugMore(...) ;
+#define LogDebugTime(...) ;
+
+#endif // NZC_LOG_DEBUG
+
+
+#define LogError(...)     fprintf(G_NZC_Log.File, "ERROR: " __VA_ARGS__);
+#endif // NZC_LOG_ENABLED
 
 
 #endif // NZC_NZC_H
