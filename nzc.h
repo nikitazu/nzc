@@ -1,13 +1,40 @@
 #ifndef NZC_NZC_H
 #define NZC_NZC_H
 
-/* Nikita Zuev Common Code Library v0.9.0
+/**
+ * Nikita Zuev Common Code Library v1.0.0
  * ======================================
+ *
+ * [SEC00] Навигация
+ * -----------------
+ *
+ * [SEC10] База
+ * ------------
+ * [SEC11] Зависимости от стандартной библиотеки C
+ * [SEC12] Стандартные типы и литералы
+ * [SEC13] Макросы на каждый день
+ * [SEC14] Простая математика
+ *
+ * [SEC20] Типы данных
+ * -------------------
+ * [SEC21] Аллокатор типа арена
+ * [SEC22] Векторы 2D
+ * [SEC23] Строки
+ * [SEC24] Парсинг чисел
+ *
+ * [SEC30] Контейнеры
+ * ------------------
+ * [SEC31] Двое-связанный список
+ * [SEC32] Бинарное древо
+ *
+ * [SEC40] Логирование (ДЕЛА думаю логи следует вытащить в отдельный файл)
  */
 
-
-// Зависимости от стандартной библиотеки C
-//
+/**
+ * [SEC10] База
+ * ------------
+ * [SEC11] Зависимости от стандартной библиотеки C
+ */
 
 #include <assert.h>
 #include <ctype.h>
@@ -18,10 +45,9 @@
 #include <stdckdint.h>
 #include <stddef.h>
 
-
-
-// Стандартные типы и литералы
-//
+/**
+ * [SEC12] Стандартные типы и литералы
+ */
 
 #ifndef NZC_NZC_H__COMMON_TYPES
 #define NZC_NZC_H__COMMON_TYPES
@@ -29,6 +55,8 @@
 #include <limits.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdlib.h>
+#include <stdio.h>
 
 #define nil NULL
 
@@ -41,7 +69,6 @@
 #define I8_MIN CHAR_MIN
 #define I32_MIN INT_MIN
 #define I32_MAX INT_MAX
-
 
 typedef int8_t i8;
 typedef int16_t i16;
@@ -56,10 +83,11 @@ typedef uint64_t u64;
 typedef float f32;
 typedef double f64;
 
-
 #endif // NZC_NZC_H__COMMON_TYPES
 
-
+/**
+ * [SEC13] Макросы на каждый день
+ */
 
 #define f32_FMT "%f"
 #define f64_FMT "%f"
@@ -68,18 +96,14 @@ typedef double f64;
 #define u32_FMT "%i"
 #define u64_FMT "%lld"
 
-
-// Макросы на каждый день
-//
-
 #define UNUSED(x) (void)(x)
 #define NAMEOF(x) (#x)
 #define KB(x) (x * 1024)
 
-
-// Хитрый макрос линуксоидов
-// (версия не требующая GCC или CLANG)
-//
+/**
+ * Хитрый макрос линуксоидов
+ * (версия не требующая GCC или CLANG)
+ */
 #ifndef NZC_CONTAINER_OF
 /**
  * Кастует некий указатель на структуру PTR к типу TYPE,
@@ -92,10 +116,9 @@ typedef double f64;
     ((TYPE *) ((char *)(PTR) - offsetof(TYPE, MEMBER)))
 #endif // NZC_CONTAINER_OF
 
-
-// Простая математика
-//
-
+/**
+ * [SEC14] Простая математика
+ */
 #define Math_Define(T)                                  \
     inline T T##_Clamp(T v, T vmin, T vmax)             \
     {                                                   \
@@ -116,17 +139,31 @@ Math_Define(u64);
 
 #undef Math_Define
 
+/**
+ * [SEC20] Типы данных
+ * -------------------
+ * [SEC21] Аллокатор типа арена
+ */
 
-// Арена
-//
-
-typedef struct ArenaTag
+/**
+ * Арена
+ *
+ * @field Buffer указатель на буфер в памяти
+ * @field Offset отступ от начала буффера, указывающий на незанятую область в буфере
+ * @field Size   размер буфера в памяти
+ */
+typedef struct Arena
 {
     void* Buffer;
     size_t Offset;
     size_t Size;
 } Arena;
 
+/**
+ * Создаёт арену
+ *
+ * @param size размер буфера, который будет выделен под новую арену
+ */
 Arena Arena_Create(size_t size)
 {
     Arena arena = {0};
@@ -138,9 +175,24 @@ Arena Arena_Create(size_t size)
     return arena;
 }
 
+/**
+ * Добавляет новые объекты на арену
+ *
+ * @param ARENA указатель на арену (тип `Arena*`)
+ * @param COUNT кол-во значений для добавления на арену (тип `size_t`)
+ * @param TYPE  тип данных значений, добавляемых на арену
+ */
 #define Arena_Push(ARENA, COUNT, TYPE) \
     (Arena_Alloc(ARENA, COUNT, sizeof(TYPE), _Alignof(TYPE)))
 
+/**
+ * Добавляет новые объекты на арену
+ *
+ * @param arena     указатель на арену
+ * @param itemCount кол-во значений для добавления на арену
+ * @param itemSize  размер добавляемого значения
+ * @param alignSize выравнивание добавляемого значения
+ */
 void* Arena_Alloc(Arena* arena, size_t itemCount, size_t itemSize, size_t alignSize)
 {
     assert(arena != nil && "Arena_Alloc: Arena pointer must be initialized");
@@ -180,12 +232,22 @@ void* Arena_Alloc(Arena* arena, size_t itemCount, size_t itemSize, size_t alignS
     return object;
 }
 
+/**
+ * Сбрасывает арену, сдвиная на начало и затирая данные
+ *
+ * @param arena указатель на арену
+ */
 void Arena_Reset(Arena* arena)
 {
     arena->Offset = 0;
     memset(arena->Buffer, 0, arena->Size);
 }
 
+/**
+ * Освобождает память, занимаемую ареной
+ *
+ * @param arena указатель на арену
+ */
 void Arena_Free(Arena* arena)
 {
     arena->Offset = 0;
@@ -194,6 +256,13 @@ void Arena_Free(Arena* arena)
     arena->Buffer = nil;
 }
 
+/**
+ * Создаёт арену внутри другой арены
+ *
+ * @param parent указатель на родительскую арену
+ * @param size   размер создаваемой арены
+ * @return       указатель на созданную арену
+ */
 Arena* Arena_CreateChild(Arena* parent, size_t size)
 {
     assert(parent != nil && "Arena_CreateChild: Parent arena pointer must be initialized");
@@ -207,8 +276,9 @@ Arena* Arena_CreateChild(Arena* parent, size_t size)
     return child;
 }
 
-// Векторы 2D
-//
+/**
+ * [SEC22] Векторы 2D
+ */
 
 #define Vec2_Define(T)                                          \
     typedef struct Vec2##T##Tag {                               \
@@ -266,7 +336,6 @@ Arena* Arena_CreateChild(Arena* parent, size_t size)
         a->Y *= val;                                                    \
     }
 
-
 Vec2_Define(f32);
 Vec2_Define(f64);
 Vec2_Define(i32);
@@ -276,14 +345,12 @@ Vec2_Define(u64);
 
 #undef Vec2_Define
 
-
 typedef Vec2f32 fvec2;
 typedef Vec2f64 dvec2;
 typedef Vec2i32 ivec2;
 typedef Vec2i64 lvec2;
 typedef Vec2u32 uvec2;
 typedef Vec2u64 ulvec2;
-
 
 #define FVEC2(a, b) ((fvec2){ a, b })
 #define DVEC2(a, b) ((dvec2){ a, b })
@@ -292,14 +359,12 @@ typedef Vec2u64 ulvec2;
 #define UVEC2(a, b) ((uvec2){ a, b })
 #define ULVEC2(a, b) ((ulvec2){ a, b })
 
-
 #define Vec2f32_ZERO ((fvec2){0})
 #define Vec2f64_ZERO ((dvec2){0})
 #define Vec2i32_ZERO ((ivec2){0})
 #define Vec2i64_ZERO ((lvec2){0})
 #define Vec2u32_ZERO ((uvec2){0})
 #define Vec2u64_ZERO ((ulvec2){0})
-
 
 #define Vec2f32_FMT "{%f;%f}"
 #define Vec2f64_FMT "{%f;%f}"
@@ -308,23 +373,40 @@ typedef Vec2u64 ulvec2;
 #define Vec2u32_FMT "{%i;%i}"
 #define Vec2u64_FMT "{%lld;%lld}"
 
+/**
+ * [SEC23] Строки
+ */
 
-// Строки
-//
-
+/**
+ * Строка
+ *
+ * @field Length размер строки
+ * @field Str    указатель на начало строки
+ */
 typedef struct String
 {
     size_t Length;
     const char* Str;
 } String;
 
-
+/**
+ * Создаёт строку из массива символов
+ *
+ * @param str указатель на массив символов
+ */
 String String_FromChars(const char* str)
 {
     size_t len = str == nil ? 0 : strlen(str);
     return (String){ .Length = len, .Str = str };
 }
 
+/**
+ * Копирует строку в целевой буфер
+ *
+ * @param source     копируемая строка
+ * @param dest       целевой буфер
+ * @param destLength размер целевого буфера
+ */
 bool String_CopyTo(String source, char* dest, size_t destLength)
 {
     if (source.Length + 1 > destLength) { return false; }
@@ -335,6 +417,13 @@ bool String_CopyTo(String source, char* dest, size_t destLength)
     return true;
 }
 
+/**
+ * Сравнивает две строки с учётом регистра символов
+ *
+ * @param a одна строка
+ * @param b другая строка
+ * @return  истина, если строки идентичны, иначе - ложь
+ */
 bool String_Equal(String a, String b)
 {
     if (a.Str == b.Str) { return true; }
@@ -344,6 +433,27 @@ bool String_Equal(String a, String b)
     return memcmp(a.Str, b.Str, a.Length) == 0;
 }
 
+/**
+ * Сравнивает два массива символов строки с учётом регистра символов для сортировки
+ *
+ * @param s1   первый массив символов
+ * @param len1 длина первого массива
+ * @param s2   второй массив символов
+ * @param len2 длина второго массива
+ * @return      0 - если массивы одинаковые
+ *              1 - если первый массив больше
+ *             -1 - если первый массив меньше
+ *
+ * Примечание: массивы считаются одинаковыми, если их указатели равны
+ *             или их длина и содержимое совпадают.
+ *
+ *             Всякий массив считается больше другого,
+ *             если его указатель не nil, а другой указател nil.
+ *
+ *             Всякий массив считается больше другого,
+ *             если в нём есть символы с большим значением
+ *             в порядке расположения, в т.ч. и за счёт большей длины.
+ */
 i32 str_Compare(const char* s1, size_t len1,
                 const char* s2, size_t len2)
 {
@@ -359,12 +469,29 @@ i32 str_Compare(const char* s1, size_t len1,
     if (len1 > len2) { return  1; }
     return 0;
 }
-
+/**
+ * Сравнивает две строки с учётом регистра символов для сортировки
+ *
+ * @param a первая строка
+ * @param b вторая строка
+ * @return   0 - если строки одинаковые
+ *           1 - если первая строка больше
+ *          -1 - если первая строка меньше
+ *
+ * Примечание: алгоритм сравненеия аналогичен `str_Compare`
+ */
 i32 String_Compare(String a, String b)
 {
     return str_Compare(a.Str, a.Length, b.Str, b.Length);
 }
 
+/**
+ * Сравнивает строку с массивом символов с учётом регистра символов
+ *
+ * @param s   строка
+ * @param str массив символов
+ * @return    истина, если данные идентичны, иначе - ложь
+ */
 bool String_EqualChars(String s, const char* str)
 {
     if (s.Str == str) { return true; }
@@ -373,21 +500,17 @@ bool String_EqualChars(String s, const char* str)
     return memcmp(s.Str, str, s.Length) == 0;
 }
 
-bool str_IsPositiveInt32(const char* s)
-{
-    if (s == nil) { return false; }
-    if (*s == '\0') { return false; }
-    const i32 limit = 9;
-    i32 i = 0;
-    char c;
-    for (i = 0, c = s[i]; c != '\0'; i++, c = s[i])
-    {
-        if (!isdigit(c)) { return false; }
-        if (i == limit) { return false; }
-    }
-    return true;
-}
-
+/**
+ * Ищет строку-иголку `needle` в строке-стоге-сена `haystack`
+ * без учёта регистра символов
+ *
+ * @param haystack строка, в которой осуществляется поиск
+ * @param needle   искомая подстрока
+ * @return         в случае успеха - указатель на расположение подстроки
+ *                 в случае неудачи - nil
+ *
+ * Примечание: ожидает нуль-терминированные массивы символов в качестве строк
+ */
 char* str_SearchIgnoreCase(const char* haystack, const char* needle)
 {
     if (haystack == nil || needle == nil || *needle == '\0')
@@ -422,10 +545,159 @@ char* str_SearchIgnoreCase(const char* haystack, const char* needle)
     return nil;
 }
 
+/**
+ * Проверяет, что входная строка содержит положительное целое число в пределах 32 бит.
+ *
+ * @param s строка
+ * @return  истина в случае успеха, иначе - ложь
+ *
+ * Примечание: ожидает нуль-терминированный массив символов в качестве строки
+ */
+bool str_IsPositiveInt32(const char* s)
+{
+    if (s == nil) { return false; }
+    if (*s == '\0') { return false; }
+    const i32 limit = 9;
+    i32 i = 0;
+    char c;
+    for (i = 0, c = s[i]; c != '\0'; i++, c = s[i])
+    {
+        if (!isdigit(c)) { return false; }
+        if (i == limit) { return false; }
+    }
+    return true;
+}
+
+/**
+ * [SEC24] Парсинг
+ */
+
+/**
+ * Распознаёт целое 32-битное число со знаком в предоставленном буфере
+ *
+ * @param buffer указатель на буфер символов
+ * @param offset сдвиг от начала буфера
+ * @param size   размер буфера
+ * @return       распознанное число или 0
+ */
+i32 i32_Parse(const char* buffer, size_t offset, size_t size)
+{
+    if (buffer == nil) { return 0; }
+    if (offset >= size) { return 0; }
+    i32 value = 0;
+    i32 sign = 1;
+    size_t i = offset;
+    if (buffer[i] == '-')
+    {
+        sign = -1;
+        i++;
+    }
+    for (; i < size; i++)
+    {
+        char c = buffer[i];
+        if (c < '0' || c > '9') { i++; break; }
+        if (value != 0) { value *= 10; }
+        value += (c - 48);
+    }
+    value *= sign;
+    return value;
+}
+
+/**
+ * Распознаёт целое 64-битное число со знаком в предоставленном буфере
+ *
+ * @param buffer указатель на буфер символов
+ * @param offset сдвиг от начала буфера
+ * @param size   размер буфера
+ * @return       распознанное число или 0
+ */
+i64 i64_Parse(const char* buffer, size_t offset, size_t size)
+{
+    if (buffer == nil) { return 0; }
+    if (offset >= size) { return 0; }
+    i64 value = 0;
+    i64 sign = 1;
+    size_t i = offset;
+    if (buffer[i] == '-')
+    {
+        sign = -1;
+        i++;
+    }
+    for (; i < size; i++)
+    {
+        char c = buffer[i];
+        if (c < '0' || c > '9') { i++; break; }
+        if (value != 0) { value *= 10; }
+        value += (c - 48);
+    }
+    value *= sign;
+    return value;
+}
+
+/**
+ * Распознаёт 32-битное число с плавающей запятой со знаком в предоставленном буфере
+ *
+ * @param buffer указатель на буфер символов
+ * @param offset сдвиг от начала буфера
+ * @param size   размер буфера
+ * @return       распознанное число или 0.f
+ */
+f32 f32_Parse(const char* buffer, size_t offset, size_t bufferSize)
+{
+    f32 value = 0.f;
+    f32 value2 = 0.f;
+    size_t i = offset;
+    bool isNegative = false;
+    if (buffer[i] == '-')
+    {
+        isNegative = true;
+        i++;
+    }
+    if (i < bufferSize)
+    {
+        for (; i < bufferSize; i++)
+        {
+            char c = buffer[i];
+            if (c == '.') { i++; break; }
+            if (c < '0' || c > '9') { i++; break; }
+            value += (c - 48);
+            value *= 10.f;
+        }
+        value /= 10.f;
+    }
+    i32 numDecimals = 0;
+    if (i < bufferSize)
+    {
+        for (; i < bufferSize; i++)
+        {
+            char c = buffer[i];
+            if (c < '0' || c > '9') { break; }
+            numDecimals += 1;
+            value2 += (c - 48);
+            value2 *= 10.f;
+        }
+        value2 /= 10.f;
+    }
+    while (numDecimals-- > 0)
+    {
+        value2 /= 10.f;
+    }
+    f32 result = value + value2;
+    if (isNegative)
+    {
+        result *= -1.f;
+    }
+    return result;
+}
+
+/**
+ * [SEC30] Контейнеры
+ * ------------------
+ * [SEC31] Двое-связанный список
+ */
 
 #ifndef NZC_DOUBLY_LINKED_LIST_H
 #define NZC_DOUBLY_LINKED_LIST_H
-
 
 struct DLNode;
 typedef struct DLNode DLNode;
@@ -458,7 +730,6 @@ void DLNode_MoveAppend(DLNode* item, DLNode* toList);
 bool DLNode_IsEmpty(DLNode* item);
 void DLNode_Concat(DLNode* list1, DLNode* list2);
 
-
 #ifndef DL_EACH
 #define DL_EACH(TYPE, IT, LIST, MEMBER)                                 \
     for (TYPE* IT = NZC_CONTAINER_OF((&(LIST)->MEMBER)->Next, TYPE, MEMBER); \
@@ -467,8 +738,7 @@ void DLNode_Concat(DLNode* list1, DLNode* list2);
 #endif // DL_EACH
 
 
-#ifdef DOUBLY_LINKED_LIST_IMPLEMENTATION
-
+#ifdef NZC_DOUBLY_LINKED_LIST_IMPLEMENTATION
 
 void DLNode_Init(DLNode* item)
 {
@@ -558,11 +828,13 @@ void DLNode_Concat(DLNode* list1, DLNode* list2)
     DLNode_Init(list2);
 }
 
-#endif // DOUBLY_LINKED_LIST_IMPLEMENTATION
+#endif // NZC_DOUBLY_LINKED_LIST_IMPLEMENTATION
 
 #endif // NZC_DOUBLY_LINKED_LIST_H
 
-
+/**
+ * [SEC32] Бинарное древо
+ */
 
 #ifndef NZC_BINARY_SEARCH_TREE_LIST_H
 #define NZC_BINARY_SEARCH_TREE_LIST_H
@@ -651,10 +923,12 @@ void BST_WalkInOrder(BST* t, void* accum, BST_WalkProc proc)
 }
 
 // ДЕЛА реализовать нерекурсивный итератор, с использованием стека
-// ДЕЛА заценить RAD debugger
 
 #endif // NZC_BINARY_SEARCH_TREE_LIST_H
 
+/**
+ * [SEC40] Логирование
+ */
 
 #ifdef NZC_LOG_ENABLED
 #include <time.h>
@@ -671,9 +945,7 @@ typedef struct LogContext
     char TimeBuf[255];
 } LogContext;
 
-
 static LogContext G_NZC_Log;
-
 
 #ifdef NZC_LOG_DEBUG
 
@@ -705,7 +977,6 @@ static LogContext G_NZC_Log;
 #define LogDebugTime(...) ;
 
 #endif // NZC_LOG_DEBUG
-
 
 #define LogError(...)     fprintf(G_NZC_Log.File, "ERROR: " __VA_ARGS__);
 #endif // NZC_LOG_ENABLED

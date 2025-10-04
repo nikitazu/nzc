@@ -1,5 +1,7 @@
-#define DOUBLY_LINKED_LIST_IMPLEMENTATION
+#define NZC_DOUBLY_LINKED_LIST_IMPLEMENTATION
 #include "nzc.h"
+#define NZC_NZARG_IMPLEMENTATION
+#include "nzarg.h"
 #include <stdio.h>
 
 
@@ -96,6 +98,119 @@
         }                                                               \
     }
 
+void TEST_ParseInt32(bool* success)
+{
+    PRINT("TEST Parse (i32)");
+
+    i32 value = 0;
+
+    value = i32_Parse("[0]", 1, 3);
+    if (value != 0)
+    {
+        PRINT_Failed("%d", "i32_Parse [0]", 0, value);
+        *success = false;
+        return;
+    }
+
+    value = i32_Parse("[123]", 1, 5);
+    if (value != 123)
+    {
+        PRINT_Failed("%d", "i32_Parse [123]", 123, value);
+        *success = false;
+        return;
+    }
+
+    value = i32_Parse("[-123]", 1, 6);
+    if (value != -123)
+    {
+        PRINT_Failed("%d", "i32_Parse [-123]", -123, value);
+        *success = false;
+        return;
+    }
+
+    value = i32_Parse("[500111222]", 1, 11);
+    if (value != 500111222)
+    {
+        PRINT_Failed("%d", "i32_Parse [500111222]", 500111222, value);
+        *success = false;
+        return;
+    }
+
+    value = i32_Parse("[2147483647]", 1, 12);
+    if (value != 2147483647)
+    {
+        PRINT_Failed("%d", "i32_Parse [2147483647]", 2147483647, value);
+        *success = false;
+        return;
+    }
+
+    value = i32_Parse("[-2147483648]", 1, 13);
+    if (value != -2147483648)
+    {
+        PRINT_Failed("%d", "i32_Parse [-2147483648]", (i32)(-2147483648), value);
+        *success = false;
+        return;
+    }
+
+    PRINT("TEST Parse (i32) - OK");
+}
+
+void TEST_ParseFloat32(bool* success)
+{
+    PRINT("TEST Parse (f32)");
+
+    f32 value = 0.f;
+
+    value = f32_Parse("[0]", 1, 3);
+    if (value != 0.f)
+    {
+        PRINT_Failed("%f", "f32_Parse [0]", 0.f, value);
+        *success = false;
+        return;
+    }
+
+    value = f32_Parse("[1.23]", 1, 5);
+    if (value != 1.23f)
+    {
+        PRINT_Failed("%f", "f32_Parse [1.23]", 1.23f, value);
+        *success = false;
+        return;
+    }
+
+    value = f32_Parse("[-1.23]", 1, 6);
+    if (value != -1.23f)
+    {
+        PRINT_Failed("%f", "f32_Parse [-1.23]", -1.23f, value);
+        *success = false;
+        return;
+    }
+
+    value = f32_Parse("[500.111222]", 1, 11);
+    if (value != 500.111222f)
+    {
+        PRINT_Failed("%f", "f32_Parse [500.111222]", 500.111222f, value);
+        *success = false;
+        return;
+    }
+
+    value = f32_Parse("[214.7483647]", 1, 12);
+    if (value != 214.7483647f)
+    {
+        PRINT_Failed("%f", "f32_Parse [214.7483647]", 214.7483647f, value);
+        *success = false;
+        return;
+    }
+
+    value = f32_Parse("[-214.7483648]", 1, 13);
+    if (value != -214.7483648f)
+    {
+        PRINT_Failed("%f", "f32_Parse [-214.7483648]", (f32)(-214.7483648f), value);
+        *success = false;
+        return;
+    }
+
+    PRINT("TEST Parse (f32) - OK");
+}
 
 void TEST_Arena(bool* success)
 {
@@ -865,6 +980,276 @@ cleanup:
 }
 
 
+typedef struct NZArgTestSettings
+{
+    bool   BoolVal;
+    i32    Int32Val;
+    i64    Int64Val;
+    String StringVal;
+    size_t RestCount;
+    String RestVals[NZARG_RESULT_CAPACITY];
+} NZArgTestSettings;
+
+void TEST_NZArgDefaults(bool* success)
+{
+    PRINT("TEST NZArg (defaults)");
+    NZArgTestSettings settings;
+    NZArgParseResult result;
+    const char* argv[10] = {"-x", "foo", "bar"};
+    size_t argc = 3;
+
+    settings = (NZArgTestSettings){
+        .BoolVal = true,
+        .Int32Val = 1,
+        .Int64Val = 1,
+        .StringVal = String_FromChars("yo"),
+    };
+
+    NZArg_DefineBool('b', "bool", &settings.BoolVal);
+    NZArg_DefineInt32('I', "int32", &settings.Int32Val);
+    NZArg_DefineInt64('L', "int64", &settings.Int64Val);
+    NZArg_DefineString('s', "string", &settings.StringVal);
+    NZArg_DefineRest(&settings.RestCount, settings.RestVals);
+    result = NZArg_Parse(0, argc, argv);
+
+    if (!result.Success)
+    {
+        NZArg_PrintError(stderr, result);
+        *success = false;
+        return;
+    }
+
+    if (settings.BoolVal)
+    {
+        PRINT_Failed("%d", "NZArg (defaults) bool", false, settings.BoolVal);
+        *success = false;
+        return;
+    }
+
+    if (settings.Int32Val != 0)
+    {
+        PRINT_Failed("%d", "NZArg (defaults) i32", 0, settings.Int32Val);
+        *success = false;
+        return;
+    }
+
+    if (settings.Int64Val != 0)
+    {
+        PRINT_Failed("%lld", "NZArg (defaults) i64", (i64)0, settings.Int64Val);
+        *success = false;
+        return;
+    }
+
+    if (settings.StringVal.Str != nil)
+    {
+        PRINT_Failed("%s", "NZArg (defaults) string", "", settings.StringVal.Str);
+        *success = false;
+        return;
+    }
+
+    if (settings.RestCount != 2)
+    {
+        PRINT_Failed("%zu", "NZArg (defaults) rest count", (size_t)2, settings.RestCount);
+        *success = false;
+        return;
+    }
+
+    String restFoo = String_FromChars("foo");
+    String restBar = String_FromChars("bar");
+
+    if (!String_Equal(settings.RestVals[0], restFoo))
+    {
+        PRINT_Failed("%s", "NZArg (defaults) rest foo", restFoo.Str, settings.RestVals[0].Str);
+        *success = false;
+        return;
+    }
+
+    if (!String_Equal(settings.RestVals[1], restBar))
+    {
+        PRINT_Failed("%s", "NZArg (defaults) rest bar", restBar.Str, settings.RestVals[1].Str);
+        *success = false;
+        return;
+    }
+
+    PRINT("TEST NZArg (defaults) - OK");
+}
+
+void TEST_NZArgShortNames(bool* success)
+{
+    PRINT("TEST NZArg (short names)");
+    NZArgTestSettings settings;
+    NZArgParseResult result;
+    const char* argv[10] = {
+        "-b",
+        "-I", "123",
+        "-L", "111222333444",
+        "-s", "Ooh lala"
+    };
+    size_t argc = 7;
+
+    settings = (NZArgTestSettings){0};
+    g_NZArgParser = (NZArgParser){0};
+    NZArg_DefineBool('b', "bool", &settings.BoolVal);
+    NZArg_DefineInt32('I', "int32", &settings.Int32Val);
+    NZArg_DefineInt64('L', "int64", &settings.Int64Val);
+    NZArg_DefineString('s', "string", &settings.StringVal);
+    result = NZArg_Parse(0, argc, argv);
+
+    if (!result.Success)
+    {
+        NZArg_PrintError(stderr, result);
+        *success = false;
+        return;
+    }
+
+    if (!settings.BoolVal)
+    {
+        PRINT_Failed("%d", "NZArg (short names) bool", true, settings.BoolVal);
+        *success = false;
+        return;
+    }
+
+    if (settings.Int32Val != 123)
+    {
+        PRINT_Failed("%d", "NZArg (short names) i32", 123, settings.Int32Val);
+        *success = false;
+        return;
+    }
+
+    if (settings.Int64Val != 111222333444)
+    {
+        PRINT_Failed("%lld", "NZArg (short names) i64", (i64)111222333444, settings.Int64Val);
+        *success = false;
+        return;
+    }
+
+    String expectedStringVal = String_FromChars("Ooh lala");
+    if (!String_Equal(settings.StringVal, expectedStringVal))
+    {
+        PRINT_Failed("%s", "NZArg (short names) string",
+                     expectedStringVal.Str,
+                     settings.StringVal.Str);
+        *success = false;
+        return;
+    }
+
+    PRINT("TEST NZArg (short names) - OK");
+}
+
+void TEST_NZArgLongNames(bool* success)
+{
+    PRINT("TEST NZArg (long names)");
+    NZArgTestSettings settings;
+    NZArgParseResult result;
+    const char* argv[10] = {
+        "--bool",
+        "--int32", "512",
+        "--int64", "1024",
+        "--string", "OOH LALA"
+    };
+    size_t argc = 7;
+
+    settings = (NZArgTestSettings){0};
+    g_NZArgParser = (NZArgParser){0};
+    NZArg_DefineBool('b', "bool", &settings.BoolVal);
+    NZArg_DefineInt32('I', "int32", &settings.Int32Val);
+    NZArg_DefineInt64('L', "int64", &settings.Int64Val);
+    NZArg_DefineString('s', "string", &settings.StringVal);
+    result = NZArg_Parse(0, argc, argv);
+
+    if (!result.Success)
+    {
+        NZArg_PrintError(stderr, result);
+        *success = false;
+        return;
+    }
+
+    if (!settings.BoolVal)
+    {
+        PRINT_Failed("%d", "NZArg (long names) bool", true, settings.BoolVal);
+        *success = false;
+        return;
+    }
+
+    if (settings.Int32Val != 512)
+    {
+        PRINT_Failed("%d", "NZArg (long names) i32", 512, settings.Int32Val);
+        *success = false;
+        return;
+    }
+
+    if (settings.Int64Val != 1024)
+    {
+        PRINT_Failed("%lld", "NZArg (long names) i64", (i64)1024, settings.Int64Val);
+        *success = false;
+        return;
+    }
+
+    String expectedStringVal = String_FromChars("OOH LALA");
+    if (!String_Equal(settings.StringVal, expectedStringVal))
+    {
+        PRINT_Failed("%s", "NZArg (long names) string",
+                     expectedStringVal.Str,
+                     settings.StringVal.Str);
+        *success = false;
+        return;
+    }
+
+    PRINT("TEST NZArg (long names) - OK");
+}
+
+void TEST_NZArgBoolExplicit(bool* success)
+{
+    PRINT("TEST NZArg (bool explicit)");
+    NZArgTestSettings settings;
+    NZArgParseResult result;
+    const char* argv[10] = {"-b", "false"};
+    size_t argc = 2;
+
+    settings = (NZArgTestSettings){0};
+    g_NZArgParser = (NZArgParser){0};
+    NZArg_DefineBool('b', "bool", &settings.BoolVal);
+    result = NZArg_Parse(0, argc, argv);
+
+    if (!result.Success)
+    {
+        NZArg_PrintError(stderr, result);
+        *success = false;
+        return;
+    }
+
+    if (settings.BoolVal)
+    {
+        PRINT_Failed("%d", "NZArg (bool explicit) false", false, settings.BoolVal);
+        *success = false;
+        return;
+    }
+
+    argv[1] = "true";
+    settings = (NZArgTestSettings){0};
+    g_NZArgParser = (NZArgParser){0};
+    NZArg_DefineBool('b', "bool", &settings.BoolVal);
+    result = NZArg_Parse(0, argc, argv);
+
+    if (!result.Success)
+    {
+        NZArg_PrintError(stderr, result);
+        *success = false;
+        return;
+    }
+
+    if (!settings.BoolVal)
+    {
+        PRINT_Failed("%d", "NZArg (bool explicit) true", true, settings.BoolVal);
+        *success = false;
+        return;
+    }
+
+    PRINT("TEST NZArg (bool explicit) - OK");
+}
+
+
+
 i32 main(i32 argc, const char** args)
 {
     PRINT("NZC test start");
@@ -885,6 +1270,8 @@ i32 main(i32 argc, const char** args)
     TEST_Vec2(Vec2u32, 15, 20, 05, 10);
     TEST_Vec2(Vec2u64, 15, 20, 05, 10);
 
+    TEST_ParseInt32(&success);
+    TEST_ParseFloat32(&success);
     TEST_Arena(&success);
     TEST_ChildArena(&success);
     TEST_String(&success);
@@ -893,6 +1280,11 @@ i32 main(i32 argc, const char** args)
     TEST_DoublyLinkedListOnStack(&success);
 
     TEST_BinarySearchTreeOnStack(&success);
+
+    TEST_NZArgDefaults(&success);
+    TEST_NZArgShortNames(&success);
+    TEST_NZArgLongNames(&success);
+    TEST_NZArgBoolExplicit(&success);
 
     if (success)
     {
