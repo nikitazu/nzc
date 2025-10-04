@@ -2,11 +2,15 @@
 #define NZC_NZC_H
 
 /**
- * Nikita Zuev Common Code Library v1.0.0
+ * Nikita Zuev Common Code Library v2.0.0
  * ======================================
  *
  * [SEC00] Навигация
  * -----------------
+ *
+ * [SEC01] Инструкция
+ * [SEC02] АПИ
+ * [SEC03] Реализация
  *
  * [SEC10] База
  * ------------
@@ -31,6 +35,20 @@
  */
 
 /**
+ * [SEC01] Инструкция
+ * ==================
+ *
+ * // Подключите заголовочный файл
+ * #define NZC_NZC_IMPLEMENTATION                  // определить флаг в файле реализации
+ * #define NZC_NZC_DOUBLY_LINKED_LIST_ENABLED      // подключить двое-связанный список
+ * #define NZC_NZC_BINARY_SEARCH_TREE_LIST_ENABLED // подключить бинарное поисковое древо
+ * #include "nzc.h"
+ */
+
+/**
+ * [SEC02] АПИ
+ * ===========
+ *
  * [SEC10] База
  * ------------
  * [SEC11] Зависимости от стандартной библиотеки C
@@ -164,16 +182,7 @@ typedef struct Arena
  *
  * @param size размер буфера, который будет выделен под новую арену
  */
-Arena Arena_Create(size_t size)
-{
-    Arena arena = {0};
-    arena.Buffer = malloc(size);
-    if (arena.Buffer != nil)
-    {
-        arena.Size = size;
-    }
-    return arena;
-}
+Arena Arena_Create(size_t size);
 
 /**
  * Добавляет новые объекты на арену
@@ -193,68 +202,21 @@ Arena Arena_Create(size_t size)
  * @param itemSize  размер добавляемого значения
  * @param alignSize выравнивание добавляемого значения
  */
-void* Arena_Alloc(Arena* arena, size_t itemCount, size_t itemSize, size_t alignSize)
-{
-    assert(arena != nil && "Arena_Alloc: Arena pointer must be initialized");
-    assert(itemCount > 0 && "Arena_Alloc: Item count must be non negative");
-    assert(itemSize > 0 && "Arena_Alloc: Item size must be non negative");
-
-    // Проверка что `alignSize` в степени 2
-    if (alignSize == 0 && (alignSize & (alignSize - 1)) == 1)
-    {
-        return nil;
-    }
-
-    uintptr_t allocationSize;
-    if (ckd_mul(&allocationSize, itemCount, itemSize))
-    {
-        return nil;
-    }
-
-    uintptr_t totalOffset = (uintptr_t)arena->Buffer + (uintptr_t)arena->Offset;
-
-    // то же самое, что и totalOffset % alignSize, но быстрее
-    uintptr_t padding = (~totalOffset + 1) & (alignSize - 1);
-
-    totalOffset += padding;
-
-    // Проверка на вместимость
-    if (totalOffset + allocationSize > (uintptr_t)arena->Buffer + (uintptr_t)arena->Size)
-    {
-        return nil;
-    }
-
-    arena->Offset += padding;
-    arena->Offset += allocationSize;
-
-    void* object = (void*)totalOffset;
-    memset(object, 0, allocationSize);
-    return object;
-}
+void* Arena_Alloc(Arena* arena, size_t itemCount, size_t itemSize, size_t alignSize);
 
 /**
  * Сбрасывает арену, сдвиная на начало и затирая данные
  *
  * @param arena указатель на арену
  */
-void Arena_Reset(Arena* arena)
-{
-    arena->Offset = 0;
-    memset(arena->Buffer, 0, arena->Size);
-}
+void Arena_Reset(Arena* arena);
 
 /**
  * Освобождает память, занимаемую ареной
  *
  * @param arena указатель на арену
  */
-void Arena_Free(Arena* arena)
-{
-    arena->Offset = 0;
-    arena->Size = 0;
-    free(arena->Buffer);
-    arena->Buffer = nil;
-}
+void Arena_Free(Arena* arena);
 
 /**
  * Создаёт арену внутри другой арены
@@ -263,18 +225,7 @@ void Arena_Free(Arena* arena)
  * @param size   размер создаваемой арены
  * @return       указатель на созданную арену
  */
-Arena* Arena_CreateChild(Arena* parent, size_t size)
-{
-    assert(parent != nil && "Arena_CreateChild: Parent arena pointer must be initialized");
-    Arena* child = Arena_Push(parent, 1, Arena);
-    if (child == nil) { return nil; }
-    u8* buffer = Arena_Push(parent, size, u8);
-    if (buffer == nil) { return nil; } // TODO free child
-    child->Buffer = buffer;
-    child->Offset = 0;
-    child->Size = size;
-    return child;
-}
+Arena* Arena_CreateChild(Arena* parent, size_t size);
 
 /**
  * [SEC22] Векторы 2D
@@ -394,11 +345,7 @@ typedef struct String
  *
  * @param str указатель на массив символов
  */
-String String_FromChars(const char* str)
-{
-    size_t len = str == nil ? 0 : strlen(str);
-    return (String){ .Length = len, .Str = str };
-}
+String String_FromChars(const char* str);
 
 /**
  * Копирует строку в целевой буфер
@@ -407,15 +354,7 @@ String String_FromChars(const char* str)
  * @param dest       целевой буфер
  * @param destLength размер целевого буфера
  */
-bool String_CopyTo(String source, char* dest, size_t destLength)
-{
-    if (source.Length + 1 > destLength) { return false; }
-    size_t length = destLength;
-    if (source.Length < destLength) { length = source.Length; }
-    memcpy(dest, source.Str, length);
-    dest[length] = '\0';
-    return true;
-}
+bool String_CopyTo(String source, char* dest, size_t destLength);
 
 /**
  * Сравнивает две строки с учётом регистра символов
@@ -424,14 +363,7 @@ bool String_CopyTo(String source, char* dest, size_t destLength)
  * @param b другая строка
  * @return  истина, если строки идентичны, иначе - ложь
  */
-bool String_Equal(String a, String b)
-{
-    if (a.Str == b.Str) { return true; }
-    if (a.Length != b.Length) { return false; }
-    if (a.Str == nil) { return false; }
-    if (b.Str == nil) { return false; }
-    return memcmp(a.Str, b.Str, a.Length) == 0;
-}
+bool String_Equal(String a, String b);
 
 /**
  * Сравнивает два массива символов строки с учётом регистра символов для сортировки
@@ -455,6 +387,351 @@ bool String_Equal(String a, String b)
  *             в порядке расположения, в т.ч. и за счёт большей длины.
  */
 i32 str_Compare(const char* s1, size_t len1,
+                const char* s2, size_t len2);
+
+/**
+ * Сравнивает две строки с учётом регистра символов для сортировки
+ *
+ * @param a первая строка
+ * @param b вторая строка
+ * @return   0 - если строки одинаковые
+ *           1 - если первая строка больше
+ *          -1 - если первая строка меньше
+ *
+ * Примечание: алгоритм сравненеия аналогичен `str_Compare`
+ */
+i32 String_Compare(String a, String b);
+
+/**
+ * Сравнивает строку с массивом символов с учётом регистра символов
+ *
+ * @param s   строка
+ * @param str массив символов
+ * @return    истина, если данные идентичны, иначе - ложь
+ */
+bool String_EqualChars(String s, const char* str);
+
+/**
+ * Ищет строку-иголку `needle` в строке-стоге-сена `haystack`
+ * без учёта регистра символов
+ *
+ * @param haystack строка, в которой осуществляется поиск
+ * @param needle   искомая подстрока
+ * @return         в случае успеха - указатель на расположение подстроки
+ *                 в случае неудачи - nil
+ *
+ * Примечание: ожидает нуль-терминированные массивы символов в качестве строк
+ */
+char* str_SearchIgnoreCase(const char* haystack, const char* needle);
+
+/**
+ * Проверяет, что входная строка содержит положительное целое число в пределах 32 бит.
+ *
+ * @param s строка
+ * @return  истина в случае успеха, иначе - ложь
+ *
+ * Примечание: ожидает нуль-терминированный массив символов в качестве строки
+ */
+bool str_IsPositiveInt32(const char* s);
+
+/**
+ * [SEC24] Парсинг
+ */
+
+/**
+ * Распознаёт целое 32-битное число со знаком в предоставленном буфере
+ *
+ * @param buffer указатель на буфер символов
+ * @param offset сдвиг от начала буфера
+ * @param size   размер буфера
+ * @return       распознанное число или 0
+ */
+i32 i32_Parse(const char* buffer, size_t offset, size_t size);
+
+/**
+ * Распознаёт целое 64-битное число со знаком в предоставленном буфере
+ *
+ * @param buffer указатель на буфер символов
+ * @param offset сдвиг от начала буфера
+ * @param size   размер буфера
+ * @return       распознанное число или 0
+ */
+i64 i64_Parse(const char* buffer, size_t offset, size_t size);
+
+/**
+ * Распознаёт 32-битное число с плавающей запятой со знаком в предоставленном буфере
+ *
+ * @param buffer указатель на буфер символов
+ * @param offset сдвиг от начала буфера
+ * @param size   размер буфера
+ * @return       распознанное число или 0.f
+ */
+f32 f32_Parse(const char* buffer, size_t offset, size_t bufferSize);
+
+/**
+ * [SEC30] Контейнеры
+ * ------------------
+ * [SEC31] Двое-связанный список
+ */
+
+#ifdef NZC_NZC_DOUBLY_LINKED_LIST_ENABLED
+
+struct DLNode;
+typedef struct DLNode DLNode;
+
+/**
+ * Узел двое-связанного списка.
+ * @Next указатель на следующий узел списка
+ * @Prev указатель на предыдущий узел списка
+ *
+ * Структура списка такова, что первый узел является
+ * корневым, он не содержит данные и используется
+ * для идентификации списка, передачи его в функции,
+ * а также обозначения начала и конца.
+ *
+ * Список лишь из одного корневого узла - это пустой список,
+ * его указатели Next и Prev замкнуты на самого себя.
+ */
+struct DLNode
+{
+    DLNode* Next;
+    DLNode* Prev;
+};
+
+void DLNode_Init(DLNode* item);
+void DLNode_Prepend(DLNode* item, DLNode* toList);
+void DLNode_Append(DLNode* item, DLNode* toList);
+void DLNode_Remove(DLNode* item);
+void DLNode_MovePrepend(DLNode* item, DLNode* toList);
+void DLNode_MoveAppend(DLNode* item, DLNode* toList);
+bool DLNode_IsEmpty(DLNode* item);
+void DLNode_Concat(DLNode* list1, DLNode* list2);
+
+#ifndef DL_EACH
+#define DL_EACH(TYPE, IT, LIST, MEMBER)                                 \
+    for (TYPE* IT = NZC_CONTAINER_OF((&(LIST)->MEMBER)->Next, TYPE, MEMBER); \
+         &IT->MEMBER != &((LIST)->MEMBER);                              \
+         IT = NZC_CONTAINER_OF(IT->MEMBER.Next, TYPE, MEMBER))
+#endif // DL_EACH
+
+#endif // NZC_NZC_DOUBLY_LINKED_LIST_ENABLED
+
+/**
+ * [SEC32] Бинарное древо
+ */
+
+#ifdef NZC_NZC_BINARY_SEARCH_TREE_LIST_ENABLED
+
+typedef struct BST BST;
+
+struct BST
+{
+    BST* Left;
+    BST* Right;
+};
+
+typedef enum BSTResultType
+{
+    BSTResultType_MatchThis = 0,
+    BSTResultType_EmptyLeft,
+    BSTResultType_EmptyRight,
+} BSTResultType;
+
+typedef struct BSTResult
+{
+    BST*          Node;
+    BSTResultType Type;
+} BSTResult;
+
+// TODO this is left recursion, rewrite as iteration
+BSTResult BST_FindInt32(BST* t, size_t keyOffset, i32 key);
+BSTResult BST_FindString(BST* t, size_t keyOffset, String key);
+
+typedef void (*BST_WalkProc)(BST* it, void* accum);
+void BST_WalkInOrder(BST* t, void* accum, BST_WalkProc proc);
+
+// ДЕЛА реализовать нерекурсивный итератор, с использованием стека
+
+#endif // NZC_NZC_BINARY_SEARCH_TREE_LIST_ENABLED
+
+/**
+ * [SEC40] Логирование
+ */
+
+#ifdef NZC_LOG_ENABLED
+#include <time.h>
+
+#ifndef NZC_LOG_FILENAME
+#define NZC_LOG_FILENAME "log.txt"
+#endif // NZC_LOG_FILENAME
+
+typedef struct LogContext
+{
+    FILE* File;
+    time_t Now;
+    struct tm LocalNow;
+    char TimeBuf[255];
+} LogContext;
+
+static LogContext G_NZC_Log;
+
+#ifdef NZC_LOG_DEBUG
+
+#define LogOpen()         fopen_s(&G_NZC_Log.File, NZC_LOG_FILENAME, "w");
+#define LogClose()        fclose(G_NZC_Log.File);
+#define LogDebug(...)     fprintf(G_NZC_Log.File, "DEBUG: " __VA_ARGS__);
+#define LogDebugMore(...) LogDebug("       " __VA_ARGS__);
+#define LogDebugTime(...)                                               \
+    {                                                                   \
+        errno_t err;                                                    \
+        G_NZC_Log.Now = time(nil);                                      \
+        err = localtime_s(&G_NZC_Log.LocalNow, &G_NZC_Log.Now);         \
+        err = strftime(G_NZC_Log.TimeBuf,                               \
+                       sizeof(G_NZC_Log.TimeBuf),                       \
+                       "[%F %T]",                                       \
+                       &G_NZC_Log.LocalNow);                            \
+        fputs("DEBUG: ", G_NZC_Log.File);                               \
+        fputs(G_NZC_Log.TimeBuf, G_NZC_Log.File);                       \
+        fprintf(G_NZC_Log.File, " " __VA_ARGS__);                       \
+        UNUSED(err);                                                    \
+    }
+
+#else // NZC_LOG_DEBUG
+
+#define LogOpen() ;
+#define LogClose() ;
+#define LogDebug(...) ;
+#define LogDebugMore(...) ;
+#define LogDebugTime(...) ;
+
+#endif // NZC_LOG_DEBUG
+
+#define LogError(...)     fprintf(G_NZC_Log.File, "ERROR: " __VA_ARGS__);
+#endif // NZC_LOG_ENABLED
+
+
+#endif // NZC_NZC_H
+
+/**
+ * [SEC03] Реализация
+ * ==================
+ */
+
+#ifdef NZC_NZC_IMPLEMENTATION
+
+/**
+ * [SEC20] Типы данных
+ * -------------------
+ * [SEC21] Аллокатор типа арена
+ */
+
+Arena Arena_Create(size_t size)
+{
+    Arena arena = {0};
+    arena.Buffer = malloc(size);
+    if (arena.Buffer != nil)
+    {
+        arena.Size = size;
+    }
+    return arena;
+}
+
+void* Arena_Alloc(Arena* arena, size_t itemCount, size_t itemSize, size_t alignSize)
+{
+    assert(arena != nil && "Arena_Alloc: Arena pointer must be initialized");
+    assert(itemCount > 0 && "Arena_Alloc: Item count must be non negative");
+    assert(itemSize > 0 && "Arena_Alloc: Item size must be non negative");
+
+    // Проверка что `alignSize` в степени 2
+    if (alignSize == 0 && (alignSize & (alignSize - 1)) == 1)
+    {
+        return nil;
+    }
+
+    uintptr_t allocationSize;
+    if (ckd_mul(&allocationSize, itemCount, itemSize))
+    {
+        return nil;
+    }
+
+    uintptr_t totalOffset = (uintptr_t)arena->Buffer + (uintptr_t)arena->Offset;
+
+    // то же самое, что и totalOffset % alignSize, но быстрее
+    uintptr_t padding = (~totalOffset + 1) & (alignSize - 1);
+
+    totalOffset += padding;
+
+    // Проверка на вместимость
+    if (totalOffset + allocationSize > (uintptr_t)arena->Buffer + (uintptr_t)arena->Size)
+    {
+        return nil;
+    }
+
+    arena->Offset += padding;
+    arena->Offset += allocationSize;
+
+    void* object = (void*)totalOffset;
+    memset(object, 0, allocationSize);
+    return object;
+}
+
+void Arena_Reset(Arena* arena)
+{
+    arena->Offset = 0;
+    memset(arena->Buffer, 0, arena->Size);
+}
+
+void Arena_Free(Arena* arena)
+{
+    arena->Offset = 0;
+    arena->Size = 0;
+    free(arena->Buffer);
+    arena->Buffer = nil;
+}
+
+Arena* Arena_CreateChild(Arena* parent, size_t size)
+{
+    assert(parent != nil && "Arena_CreateChild: Parent arena pointer must be initialized");
+    Arena* child = Arena_Push(parent, 1, Arena);
+    if (child == nil) { return nil; }
+    u8* buffer = Arena_Push(parent, size, u8);
+    if (buffer == nil) { return nil; } // TODO free child
+    child->Buffer = buffer;
+    child->Offset = 0;
+    child->Size = size;
+    return child;
+}
+
+/**
+ * [SEC23] Строки
+ */
+
+String String_FromChars(const char* str)
+{
+    size_t len = str == nil ? 0 : strlen(str);
+    return (String){ .Length = len, .Str = str };
+}
+
+bool String_CopyTo(String source, char* dest, size_t destLength)
+{
+    if (source.Length + 1 > destLength) { return false; }
+    size_t length = destLength;
+    if (source.Length < destLength) { length = source.Length; }
+    memcpy(dest, source.Str, length);
+    dest[length] = '\0';
+    return true;
+}
+
+bool String_Equal(String a, String b)
+{
+    if (a.Str == b.Str) { return true; }
+    if (a.Length != b.Length) { return false; }
+    if (a.Str == nil) { return false; }
+    if (b.Str == nil) { return false; }
+    return memcmp(a.Str, b.Str, a.Length) == 0;
+}
+
+i32 str_Compare(const char* s1, size_t len1,
                 const char* s2, size_t len2)
 {
     if (s1 == s2) { return 0; }
@@ -469,29 +746,12 @@ i32 str_Compare(const char* s1, size_t len1,
     if (len1 > len2) { return  1; }
     return 0;
 }
-/**
- * Сравнивает две строки с учётом регистра символов для сортировки
- *
- * @param a первая строка
- * @param b вторая строка
- * @return   0 - если строки одинаковые
- *           1 - если первая строка больше
- *          -1 - если первая строка меньше
- *
- * Примечание: алгоритм сравненеия аналогичен `str_Compare`
- */
+
 i32 String_Compare(String a, String b)
 {
     return str_Compare(a.Str, a.Length, b.Str, b.Length);
 }
 
-/**
- * Сравнивает строку с массивом символов с учётом регистра символов
- *
- * @param s   строка
- * @param str массив символов
- * @return    истина, если данные идентичны, иначе - ложь
- */
 bool String_EqualChars(String s, const char* str)
 {
     if (s.Str == str) { return true; }
@@ -500,17 +760,6 @@ bool String_EqualChars(String s, const char* str)
     return memcmp(s.Str, str, s.Length) == 0;
 }
 
-/**
- * Ищет строку-иголку `needle` в строке-стоге-сена `haystack`
- * без учёта регистра символов
- *
- * @param haystack строка, в которой осуществляется поиск
- * @param needle   искомая подстрока
- * @return         в случае успеха - указатель на расположение подстроки
- *                 в случае неудачи - nil
- *
- * Примечание: ожидает нуль-терминированные массивы символов в качестве строк
- */
 char* str_SearchIgnoreCase(const char* haystack, const char* needle)
 {
     if (haystack == nil || needle == nil || *needle == '\0')
@@ -545,14 +794,6 @@ char* str_SearchIgnoreCase(const char* haystack, const char* needle)
     return nil;
 }
 
-/**
- * Проверяет, что входная строка содержит положительное целое число в пределах 32 бит.
- *
- * @param s строка
- * @return  истина в случае успеха, иначе - ложь
- *
- * Примечание: ожидает нуль-терминированный массив символов в качестве строки
- */
 bool str_IsPositiveInt32(const char* s)
 {
     if (s == nil) { return false; }
@@ -572,14 +813,6 @@ bool str_IsPositiveInt32(const char* s)
  * [SEC24] Парсинг
  */
 
-/**
- * Распознаёт целое 32-битное число со знаком в предоставленном буфере
- *
- * @param buffer указатель на буфер символов
- * @param offset сдвиг от начала буфера
- * @param size   размер буфера
- * @return       распознанное число или 0
- */
 i32 i32_Parse(const char* buffer, size_t offset, size_t size)
 {
     if (buffer == nil) { return 0; }
@@ -603,14 +836,6 @@ i32 i32_Parse(const char* buffer, size_t offset, size_t size)
     return value;
 }
 
-/**
- * Распознаёт целое 64-битное число со знаком в предоставленном буфере
- *
- * @param buffer указатель на буфер символов
- * @param offset сдвиг от начала буфера
- * @param size   размер буфера
- * @return       распознанное число или 0
- */
 i64 i64_Parse(const char* buffer, size_t offset, size_t size)
 {
     if (buffer == nil) { return 0; }
@@ -634,14 +859,6 @@ i64 i64_Parse(const char* buffer, size_t offset, size_t size)
     return value;
 }
 
-/**
- * Распознаёт 32-битное число с плавающей запятой со знаком в предоставленном буфере
- *
- * @param buffer указатель на буфер символов
- * @param offset сдвиг от начала буфера
- * @param size   размер буфера
- * @return       распознанное число или 0.f
- */
 f32 f32_Parse(const char* buffer, size_t offset, size_t bufferSize)
 {
     f32 value = 0.f;
@@ -696,49 +913,7 @@ f32 f32_Parse(const char* buffer, size_t offset, size_t bufferSize)
  * [SEC31] Двое-связанный список
  */
 
-#ifndef NZC_DOUBLY_LINKED_LIST_H
-#define NZC_DOUBLY_LINKED_LIST_H
-
-struct DLNode;
-typedef struct DLNode DLNode;
-
-/**
- * Узел двое-связанного списка.
- * @Next указатель на следующий узел списка
- * @Prev указатель на предыдущий узел списка
- *
- * Структура списка такова, что первый узел является
- * корневым, он не содержит данные и используется
- * для идентификации списка, передачи его в функции,
- * а также обозначения начала и конца.
- *
- * Список лишь из одного корневого узла - это пустой список,
- * его указатели Next и Prev замкнуты на самого себя.
- */
-struct DLNode
-{
-    DLNode* Next;
-    DLNode* Prev;
-};
-
-void DLNode_Init(DLNode* item);
-void DLNode_Prepend(DLNode* item, DLNode* toList);
-void DLNode_Append(DLNode* item, DLNode* toList);
-void DLNode_Remove(DLNode* item);
-void DLNode_MovePrepend(DLNode* item, DLNode* toList);
-void DLNode_MoveAppend(DLNode* item, DLNode* toList);
-bool DLNode_IsEmpty(DLNode* item);
-void DLNode_Concat(DLNode* list1, DLNode* list2);
-
-#ifndef DL_EACH
-#define DL_EACH(TYPE, IT, LIST, MEMBER)                                 \
-    for (TYPE* IT = NZC_CONTAINER_OF((&(LIST)->MEMBER)->Next, TYPE, MEMBER); \
-         &IT->MEMBER != &((LIST)->MEMBER);                              \
-         IT = NZC_CONTAINER_OF(IT->MEMBER.Next, TYPE, MEMBER))
-#endif // DL_EACH
-
-
-#ifdef NZC_DOUBLY_LINKED_LIST_IMPLEMENTATION
+#ifdef NZC_NZC_DOUBLY_LINKED_LIST_ENABLED
 
 void DLNode_Init(DLNode* item)
 {
@@ -828,37 +1003,13 @@ void DLNode_Concat(DLNode* list1, DLNode* list2)
     DLNode_Init(list2);
 }
 
-#endif // NZC_DOUBLY_LINKED_LIST_IMPLEMENTATION
-
-#endif // NZC_DOUBLY_LINKED_LIST_H
+#endif // NZC_NZC_DOUBLY_LINKED_LIST_ENABLED
 
 /**
  * [SEC32] Бинарное древо
  */
 
-#ifndef NZC_BINARY_SEARCH_TREE_LIST_H
-#define NZC_BINARY_SEARCH_TREE_LIST_H
-
-typedef struct BST BST;
-
-struct BST
-{
-    BST* Left;
-    BST* Right;
-};
-
-typedef enum BSTResultType
-{
-    BSTResultType_MatchThis = 0,
-    BSTResultType_EmptyLeft,
-    BSTResultType_EmptyRight,
-} BSTResultType;
-
-typedef struct BSTResult
-{
-    BST*          Node;
-    BSTResultType Type;
-} BSTResult;
+#ifdef NZC_NZC_BINARY_SEARCH_TREE_LIST_ENABLED
 
 // TODO this is left recursion, rewrite as iteration
 BSTResult BST_FindInt32(BST* t, size_t keyOffset, i32 key)
@@ -912,8 +1063,6 @@ BSTResult BST_FindString(BST* t, size_t keyOffset, String key)
     return result;
 }
 
-
-typedef void (*BST_WalkProc)(BST* it, void* accum);
 void BST_WalkInOrder(BST* t, void* accum, BST_WalkProc proc)
 {
     if (t == nil) { return; }
@@ -922,64 +1071,6 @@ void BST_WalkInOrder(BST* t, void* accum, BST_WalkProc proc)
     BST_WalkInOrder(t->Right, accum, proc);
 }
 
-// ДЕЛА реализовать нерекурсивный итератор, с использованием стека
+#endif // NZC_NZC_BINARY_SEARCH_TREE_LIST_ENABLED
 
-#endif // NZC_BINARY_SEARCH_TREE_LIST_H
-
-/**
- * [SEC40] Логирование
- */
-
-#ifdef NZC_LOG_ENABLED
-#include <time.h>
-
-#ifndef NZC_LOG_FILENAME
-#define NZC_LOG_FILENAME "log.txt"
-#endif // NZC_LOG_FILENAME
-
-typedef struct LogContext
-{
-    FILE* File;
-    time_t Now;
-    struct tm LocalNow;
-    char TimeBuf[255];
-} LogContext;
-
-static LogContext G_NZC_Log;
-
-#ifdef NZC_LOG_DEBUG
-
-#define LogOpen()         fopen_s(&G_NZC_Log.File, NZC_LOG_FILENAME, "w");
-#define LogClose()        fclose(G_NZC_Log.File);
-#define LogDebug(...)     fprintf(G_NZC_Log.File, "DEBUG: " __VA_ARGS__);
-#define LogDebugMore(...) LogDebug("       " __VA_ARGS__);
-#define LogDebugTime(...)                                               \
-    {                                                                   \
-        errno_t err;                                                    \
-        G_NZC_Log.Now = time(nil);                                      \
-        err = localtime_s(&G_NZC_Log.LocalNow, &G_NZC_Log.Now);         \
-        err = strftime(G_NZC_Log.TimeBuf,                               \
-                       sizeof(G_NZC_Log.TimeBuf),                       \
-                       "[%F %T]",                                       \
-                       &G_NZC_Log.LocalNow);                            \
-        fputs("DEBUG: ", G_NZC_Log.File);                               \
-        fputs(G_NZC_Log.TimeBuf, G_NZC_Log.File);                       \
-        fprintf(G_NZC_Log.File, " " __VA_ARGS__);                       \
-        UNUSED(err);                                                    \
-    }
-
-#else // NZC_LOG_DEBUG
-
-#define LogOpen() ;
-#define LogClose() ;
-#define LogDebug(...) ;
-#define LogDebugMore(...) ;
-#define LogDebugTime(...) ;
-
-#endif // NZC_LOG_DEBUG
-
-#define LogError(...)     fprintf(G_NZC_Log.File, "ERROR: " __VA_ARGS__);
-#endif // NZC_LOG_ENABLED
-
-
-#endif // NZC_NZC_H
+#endif // NZC_NZC_IMPLEMENTATION

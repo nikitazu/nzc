@@ -1,21 +1,71 @@
 #ifndef NZC_NZARG_H
 #define NZC_NZARG_H
 
-/* Nikita Zuev Common Code Library - Command-Line Argument Parser v0.1.0
+/* Nikita Zuev Common Code Library - Command-Line Argument Parser v1.0.0
  * =====================================================================
  *
  * [SEC00] Навигация
  * -----------------
  *
- * [SEC10] АПИ
- * [SEC20] Реалиация
+ * [SEC01] Инструкция
+ * [SEC02] АПИ
+ * [SEC03] Реалиация
  */
 
-#include "nzc.h"
+/**
+ * [SEC01] Инструкция
+ * ==================
+ *
+ * // 1. Подключите заголовочные файлы
+ *
+ * #define NZC_NZC_IMPLEMENTATION
+ * #include "nzc.h"
+ * #define NZC_NZARG_IMPLEMENTATION
+ * #include "nzarg.h"
+ *
+ * // 2. Определите структуру для хранения настроек
+ *
+ * typedef struct Settings
+ * {
+ *     bool   DebugMode;
+ *     String Name;
+ *     i32    Age;
+ * } Settings;
+ *
+ * // 3. Настройте парсер и запустите его в точке входа
+ *
+ * i32 main(size_t argc, const char** argv)
+ * {
+ *     Settings settings = {0};
+ *     NZArg_DefineBool('d', "debug", &settings.DebugMode);
+ *     NZArg_DefineString('n', "name", &settings.Name);
+ *     NZArg_DefineInt32('a', "age", &settings.Age);
+ *     NZArgResult argResult = NZArg_Parse(0, argc, argv);
+ *
+ *     // Проверьте успешность вызова парсинга
+ *     if (!argResult.Success)
+ *     {
+ *         NZArg_PrintError(stderr, argResult);
+ *         return 1;
+ *     }
+ *
+ *     // Пользуйтесь значениями настроек
+ *     if (settings.DebugMode)
+ *     {
+ *         printf("РЕЖИМ ОТЛАДЖКИ\n");
+ *     }
+ *
+ *     printf("Приветствую, %s! Твой возраст %d\n",
+ *            settings.Name.Str,
+ *            settings.Age);
+ *
+ *     return 0;
+ * }
+ */
 
 /**
- * [SEC10] АПИ
- * -----------
+ * [SEC02] АПИ
+ * ===========
  */
 
 /**
@@ -211,9 +261,12 @@ void NZArgParser_Add(
     const char* longName,
     void* value);
 
+#endif // NZC_NZARG_H
+
+
 /**
- * [SEC20] Реализация
- * ------------------
+ * [SEC03] Реализация
+ * ==================
  */
 
 #ifdef NZC_NZARG_IMPLEMENTATION
@@ -413,5 +466,3 @@ void NZArg_PrintError(FILE* f, NZArgParseResult result)
 }
 
 #endif // NZC_NZARG_IMPLEMENTATION
-
-#endif // NZC_NZARG_H

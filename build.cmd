@@ -7,6 +7,9 @@ rem Опции компилятора CLANG
 rem https://clang.llvm.org/docs/UsersManual.html
 rem https://clang.llvm.org/docs/ClangCommandLineReference.html
 
+rem TODO https://www.youtube.com/watch?v=9UIIMBqq1D4
+rem      clang -fsanitize=address
+
 chcp 65001
 if not exist .\bin\ (
    mkdir .\bin
