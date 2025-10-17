@@ -2,7 +2,7 @@
 #define NZC_NZC_H
 
 /**
- * Nikita Zuev Common Code Library v2.0.0
+ * Nikita Zuev Common Code Library v3.0.0
  * ======================================
  *
  * [SEC00] Навигация
@@ -172,7 +172,7 @@ Math_Define(u64);
  */
 typedef struct Arena
 {
-    void* Buffer;
+    void*  Buffer;
     size_t Offset;
     size_t Size;
 } Arena;
@@ -443,30 +443,30 @@ bool str_IsPositiveInt32(const char* s);
  *
  * @param buffer указатель на буфер символов
  * @param offset сдвиг от начала буфера
- * @param size   размер буфера
+ * @param count  кол-во элементов после сдвига, которое нужно распознать
  * @return       распознанное число или 0
  */
-i32 i32_Parse(const char* buffer, size_t offset, size_t size);
+i32 i32_Parse(const char* buffer, size_t offset, size_t count);
 
 /**
  * Распознаёт целое 64-битное число со знаком в предоставленном буфере
  *
  * @param buffer указатель на буфер символов
  * @param offset сдвиг от начала буфера
- * @param size   размер буфера
+ * @param count  кол-во элементов после сдвига, которое нужно распознать
  * @return       распознанное число или 0
  */
-i64 i64_Parse(const char* buffer, size_t offset, size_t size);
+i64 i64_Parse(const char* buffer, size_t offset, size_t count);
 
 /**
  * Распознаёт 32-битное число с плавающей запятой со знаком в предоставленном буфере
  *
  * @param buffer указатель на буфер символов
  * @param offset сдвиг от начала буфера
- * @param size   размер буфера
+ * @param count  кол-во элементов после сдвига, которое нужно распознать
  * @return       распознанное число или 0.f
  */
-f32 f32_Parse(const char* buffer, size_t offset, size_t bufferSize);
+f32 f32_Parse(const char* buffer, size_t offset, size_t count);
 
 /**
  * [SEC30] Контейнеры
@@ -813,13 +813,13 @@ bool str_IsPositiveInt32(const char* s)
  * [SEC24] Парсинг
  */
 
-i32 i32_Parse(const char* buffer, size_t offset, size_t size)
+i32 i32_Parse(const char* buffer, size_t offset, size_t count)
 {
     if (buffer == nil) { return 0; }
-    if (offset >= size) { return 0; }
     i32 value = 0;
     i32 sign = 1;
     size_t i = offset;
+    size_t size = offset + count;
     if (buffer[i] == '-')
     {
         sign = -1;
@@ -830,19 +830,19 @@ i32 i32_Parse(const char* buffer, size_t offset, size_t size)
         char c = buffer[i];
         if (c < '0' || c > '9') { i++; break; }
         if (value != 0) { value *= 10; }
-        value += (c - 48);
+        value += (c - '0');
     }
     value *= sign;
     return value;
 }
 
-i64 i64_Parse(const char* buffer, size_t offset, size_t size)
+i64 i64_Parse(const char* buffer, size_t offset, size_t count)
 {
     if (buffer == nil) { return 0; }
-    if (offset >= size) { return 0; }
     i64 value = 0;
     i64 sign = 1;
     size_t i = offset;
+    size_t size = offset + count;
     if (buffer[i] == '-')
     {
         sign = -1;
@@ -853,39 +853,40 @@ i64 i64_Parse(const char* buffer, size_t offset, size_t size)
         char c = buffer[i];
         if (c < '0' || c > '9') { i++; break; }
         if (value != 0) { value *= 10; }
-        value += (c - 48);
+        value += (c - '0');
     }
     value *= sign;
     return value;
 }
 
-f32 f32_Parse(const char* buffer, size_t offset, size_t bufferSize)
+f32 f32_Parse(const char* buffer, size_t offset, size_t count)
 {
     f32 value = 0.f;
     f32 value2 = 0.f;
     size_t i = offset;
+    size_t size = offset + count;
     bool isNegative = false;
     if (buffer[i] == '-')
     {
         isNegative = true;
         i++;
     }
-    if (i < bufferSize)
+    if (i < size)
     {
-        for (; i < bufferSize; i++)
+        for (; i < size; i++)
         {
             char c = buffer[i];
             if (c == '.') { i++; break; }
             if (c < '0' || c > '9') { i++; break; }
-            value += (c - 48);
+            value += (c - '0');
             value *= 10.f;
         }
         value /= 10.f;
     }
     i32 numDecimals = 0;
-    if (i < bufferSize)
+    if (i < size)
     {
-        for (; i < bufferSize; i++)
+        for (; i < size; i++)
         {
             char c = buffer[i];
             if (c < '0' || c > '9') { break; }

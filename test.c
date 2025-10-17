@@ -106,15 +106,31 @@ void TEST_ParseInt32(bool* success)
 
     i32 value = 0;
 
-    value = i32_Parse("[0]", 1, 3);
-    if (value != 0)
+    value = i32_Parse("[2]", 1, 1);
+    if (value != 2)
     {
-        PRINT_Failed("%d", "i32_Parse [0]", 0, value);
+        PRINT_Failed("%d", "i32_Parse [2]", 2, value);
         *success = false;
         return;
     }
 
-    value = i32_Parse("[123]", 1, 5);
+    value = i32_Parse("[2  ]", 1, 3);
+    if (value != 2)
+    {
+        PRINT_Failed("%d", "i32_Parse [2  ]", 2, value);
+        *success = false;
+        return;
+    }
+
+    value = i32_Parse("[2abc]", 1, 4);
+    if (value != 2)
+    {
+        PRINT_Failed("%d", "i32_Parse [2abc]", 2, value);
+        *success = false;
+        return;
+    }
+
+    value = i32_Parse("[123]", 1, 3);
     if (value != 123)
     {
         PRINT_Failed("%d", "i32_Parse [123]", 123, value);
@@ -122,7 +138,7 @@ void TEST_ParseInt32(bool* success)
         return;
     }
 
-    value = i32_Parse("[-123]", 1, 6);
+    value = i32_Parse("[-123]", 1, 4);
     if (value != -123)
     {
         PRINT_Failed("%d", "i32_Parse [-123]", -123, value);
@@ -130,7 +146,7 @@ void TEST_ParseInt32(bool* success)
         return;
     }
 
-    value = i32_Parse("[500111222]", 1, 11);
+    value = i32_Parse("[500111222]", 1, 9);
     if (value != 500111222)
     {
         PRINT_Failed("%d", "i32_Parse [500111222]", 500111222, value);
@@ -138,7 +154,7 @@ void TEST_ParseInt32(bool* success)
         return;
     }
 
-    value = i32_Parse("[2147483647]", 1, 12);
+    value = i32_Parse("[2147483647]", 1, 10);
     if (value != 2147483647)
     {
         PRINT_Failed("%d", "i32_Parse [2147483647]", 2147483647, value);
@@ -146,7 +162,7 @@ void TEST_ParseInt32(bool* success)
         return;
     }
 
-    value = i32_Parse("[-2147483648]", 1, 13);
+    value = i32_Parse("[-2147483648]", 1, 11);
     if (value != -2147483648)
     {
         PRINT_Failed("%d", "i32_Parse [-2147483648]", (i32)(-2147483648), value);
@@ -163,15 +179,15 @@ void TEST_ParseFloat32(bool* success)
 
     f32 value = 0.f;
 
-    value = f32_Parse("[0]", 1, 3);
-    if (value != 0.f)
+    value = f32_Parse("[8]", 1, 1);
+    if (value != 8.f)
     {
-        PRINT_Failed("%f", "f32_Parse [0]", 0.f, value);
+        PRINT_Failed("%f", "f32_Parse [8]", 8.f, value);
         *success = false;
         return;
     }
 
-    value = f32_Parse("[1.23]", 1, 5);
+    value = f32_Parse("[1.23]", 1, 4);
     if (value != 1.23f)
     {
         PRINT_Failed("%f", "f32_Parse [1.23]", 1.23f, value);
@@ -179,7 +195,7 @@ void TEST_ParseFloat32(bool* success)
         return;
     }
 
-    value = f32_Parse("[-1.23]", 1, 6);
+    value = f32_Parse("[-1.23]", 1, 5);
     if (value != -1.23f)
     {
         PRINT_Failed("%f", "f32_Parse [-1.23]", -1.23f, value);
@@ -187,7 +203,7 @@ void TEST_ParseFloat32(bool* success)
         return;
     }
 
-    value = f32_Parse("[500.111222]", 1, 11);
+    value = f32_Parse("[500.111222]", 1, 10);
     if (value != 500.111222f)
     {
         PRINT_Failed("%f", "f32_Parse [500.111222]", 500.111222f, value);
@@ -195,7 +211,7 @@ void TEST_ParseFloat32(bool* success)
         return;
     }
 
-    value = f32_Parse("[214.7483647]", 1, 12);
+    value = f32_Parse("[214.7483647]", 1, 11);
     if (value != 214.7483647f)
     {
         PRINT_Failed("%f", "f32_Parse [214.7483647]", 214.7483647f, value);
@@ -203,7 +219,7 @@ void TEST_ParseFloat32(bool* success)
         return;
     }
 
-    value = f32_Parse("[-214.7483648]", 1, 13);
+    value = f32_Parse("[-214.7483648]", 1, 12);
     if (value != -214.7483648f)
     {
         PRINT_Failed("%f", "f32_Parse [-214.7483648]", (f32)(-214.7483648f), value);
@@ -217,7 +233,6 @@ void TEST_ParseFloat32(bool* success)
 void TEST_Arena(bool* success)
 {
     Arena arena = Arena_Create(KB(10));
-
     if (arena.Buffer == nil)
     {
         PRINT_Failed("%s", "Arena_Create", "arena.Buffer", "nil");
