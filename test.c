@@ -32,7 +32,7 @@
         T##_ClampAssign(&r, VMIN, VMAX);                                \
         success = (r == VMIN);                                          \
         if (!success) {                                                 \
-            PRINT_Failed(T##_FMT, "Clamp", e, r);                      \
+            PRINT_Failed(T##_FMT, "Clamp", e, r);                       \
         }                                                               \
     }
 
@@ -228,6 +228,51 @@ void TEST_ParseFloat32(bool* success)
     }
 
     PRINT("TEST Parse (f32) - OK");
+}
+
+void TEST_HashMd5(bool* success)
+{
+    PRINT("TEST Hash (MD5)");
+
+    HashMd5 hash;
+    String input;
+
+    input = String_FromChars("");
+    HashMd5_Compute(&hash, (void*)input.Str, input.Length);
+    HashMd5_Write(&hash, stderr);
+    putc('\n', stderr);
+
+    input = String_FromChars("a");
+    HashMd5_Compute(&hash, (void*)input.Str, input.Length);
+    HashMd5_Write(&hash, stderr);
+    putc('\n', stderr);
+
+    input = String_FromChars("abc");
+    HashMd5_Compute(&hash, (void*)input.Str, input.Length);
+    HashMd5_Write(&hash, stderr);
+    putc('\n', stderr);
+
+    input = String_FromChars("The quick brown fox jumps over the lazy dog");
+    HashMd5_Compute(&hash, (void*)input.Str, input.Length);
+    HashMd5_Write(&hash, stderr);
+    putc('\n', stderr);
+
+    input = String_FromChars("Сообщение с разбитым паддингом");
+    HashMd5_Compute(&hash, (void*)input.Str, input.Length);
+    HashMd5_Write(&hash, stderr);
+    putc('\n', stderr);
+
+    input = String_FromChars("Сообщение с хвостом на втором блоке!");
+    HashMd5_Compute(&hash, (void*)input.Str, input.Length);
+    HashMd5_Write(&hash, stderr);
+    putc('\n', stderr);
+
+    input = String_FromChars("Сообщение тютелька в тютельку=========");
+    HashMd5_Compute(&hash, (void*)input.Str, input.Length);
+    HashMd5_Write(&hash, stderr);
+    putc('\n', stderr);
+
+    PRINT("TEST Hash (MD5) - OK");
 }
 
 void TEST_Arena(bool* success)
@@ -1289,6 +1334,7 @@ i32 main(i32 argc, const char** args)
 
     TEST_ParseInt32(&success);
     TEST_ParseFloat32(&success);
+    TEST_HashMd5(&success);
     TEST_Arena(&success);
     TEST_ChildArena(&success);
     TEST_String(&success);

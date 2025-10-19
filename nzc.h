@@ -18,6 +18,7 @@
  * [SEC12] Стандартные типы и литералы
  * [SEC13] Макросы на каждый день
  * [SEC14] Простая математика
+ * [SEC15] Хеши
  *
  * [SEC20] Типы данных
  * -------------------
@@ -156,6 +157,232 @@ Math_Define(u32);
 Math_Define(u64);
 
 #undef Math_Define
+
+/**
+ * [SEC15] Хеши
+ */
+
+#define MD5_CHUNK_SIZE          64
+#define MD5_MESSAGE_LENGTH_SIZE 8
+#define MD5_PADDING_FIRST_BYTE  0x80
+#define MD5_PADDING_FILL_BYTE   0x00
+
+typedef struct HashMd5
+{
+    union
+    {
+        u8 Bytes[16];
+        struct
+        {
+            u32 A;
+            u32 B;
+            u32 C;
+            u32 D;
+        };
+    };
+} HashMd5;
+
+void HashMd5_Compute(HashMd5* hash, u8* buffer, size_t size)
+{
+    assert(hash != nil);
+    assert(buffer != nil);
+    fprintf(stderr, "input size is %d\n", (i32)size);
+    // TODO use static initialization
+    // TODO hide under flag to not waste memory if unused
+    u32 s[64] = {
+        7, 12, 17, 22,  7, 12, 17, 22,  7, 12, 17, 22,  7, 12, 17, 22,
+        5,  9, 14, 20,  5,  9, 14, 20,  5,  9, 14, 20,  5,  9, 14, 20,
+        4, 11, 16, 23,  4, 11, 16, 23,  4, 11, 16, 23,  4, 11, 16, 23,
+        6, 10, 15, 21,  6, 10, 15, 21,  6, 10, 15, 21,  6, 10, 15, 21,
+    };
+    u32 k[64] = {
+        0xd76aa478, 0xe8c7b756, 0x242070db, 0xc1bdceee,
+        0xf57c0faf, 0x4787c62a, 0xa8304613, 0xfd469501,
+        0x698098d8, 0x8b44f7af, 0xffff5bb1, 0x895cd7be,
+        0x6b901122, 0xfd987193, 0xa679438e, 0x49b40821,
+        0xf61e2562, 0xc040b340, 0x265e5a51, 0xe9b6c7aa,
+        0xd62f105d, 0x02441453, 0xd8a1e681, 0xe7d3fbc8,
+        0x21e1cde6, 0xc33707d6, 0xf4d50d87, 0x455a14ed,
+        0xa9e3e905, 0xfcefa3f8, 0x676f02d9, 0x8d2a4c8a,
+        0xfffa3942, 0x8771f681, 0x6d9d6122, 0xfde5380c,
+        0xa4beea44, 0x4bdecfa9, 0xf6bb4b60, 0xbebfbc70,
+        0x289b7ec6, 0xeaa127fa, 0xd4ef3085, 0x04881d05,
+        0xd9d4d039, 0xe6db99e5, 0x1fa27cf8, 0xc4ac5665,
+        0xf4292244, 0x432aff97, 0xab9423a7, 0xfc93a039,
+        0x655b59c3, 0x8f0ccc92, 0xffeff47d, 0x85845dd1,
+        0x6fa87e4f, 0xfe2ce6e0, 0xa3014314, 0x4e0811a1,
+        0xf7537e82, 0xbd3af235, 0x2ad7d2bb, 0xeb86d391,
+    };
+
+    u32 a0 = 0x67452301;
+    u32 b0 = 0xefcdab89;
+    u32 c0 = 0x98badcfe;
+    u32 d0 = 0x10325476;
+
+    const size_t messageSize     = size;
+    const size_t messageTailSize = messageSize % MD5_CHUNK_SIZE;
+    const size_t paddingSize     = (MD5_CHUNK_SIZE - messageTailSize > MD5_MESSAGE_LENGTH_SIZE)
+                                 ? (MD5_CHUNK_SIZE - messageTailSize - MD5_MESSAGE_LENGTH_SIZE)
+                                 : (2 * MD5_CHUNK_SIZE - messageTailSize - MD5_MESSAGE_LENGTH_SIZE);
+    const size_t totalSize       = messageSize + paddingSize + MD5_MESSAGE_LENGTH_SIZE;
+    const size_t chunkCount      = totalSize / MD5_CHUNK_SIZE;
+
+    fprintf(stderr, // 43 43 13 64 1
+            "Debug: messageSize:     %zu\n"
+            "       messageTailSize: %zu\n"
+            "       paddingSize:     %zu\n"
+            "       totalSize:       %zu\n"
+            "       chunkCount:      %zu\n",
+            messageSize,
+            messageTailSize,
+            paddingSize,
+            totalSize,
+            chunkCount);
+
+    u8 chunk[MD5_CHUNK_SIZE];
+
+    size_t messageBytesToCopy = messageSize;
+    size_t paddingBytesToCopy = paddingSize;
+    size_t messageBytesCopied = 0;
+    size_t paddingBytesCopied = 0;
+
+    for (size_t chunkId = 0; chunkId < chunkCount; chunkId++)
+    {
+        const size_t offset = chunkId * MD5_CHUNK_SIZE;
+
+        fprintf(stderr,
+                "Debug: chunkId:                     %zu\n"
+                "       offset:                      %zu\n"
+                "       messageBytesCopied (before): %zu\n"
+                "       paddingBytesCopied (before): %zu\n",
+                chunkId,
+                offset,
+                messageBytesCopied,
+                paddingBytesCopied);
+
+        // copy message bytes
+        const size_t messageBytesToCopyThisChunk = messageBytesToCopy > MD5_CHUNK_SIZE
+            ? MD5_CHUNK_SIZE
+            : messageBytesToCopy;
+
+        if (messageBytesToCopyThisChunk > 0)
+        {
+            memcpy(chunk, buffer + offset, messageBytesToCopyThisChunk);
+            messageBytesCopied += messageBytesToCopyThisChunk;
+            messageBytesToCopy -= messageBytesCopied;
+        }
+
+        // copy padding bytes
+        const size_t chunkSizeRemains = MD5_CHUNK_SIZE - messageBytesToCopyThisChunk;
+        if (chunkSizeRemains > 0)
+        {
+            const size_t paddingBytesToCopyThisChunk = paddingBytesToCopy > chunkSizeRemains
+                ? chunkSizeRemains
+                : paddingBytesToCopy;
+
+            memset(chunk + messageBytesToCopyThisChunk,
+                   MD5_PADDING_FILL_BYTE,
+                   paddingBytesToCopyThisChunk);
+
+            if (paddingBytesCopied == 0)
+            {
+                chunk[messageBytesToCopyThisChunk] = MD5_PADDING_FIRST_BYTE;
+            }
+
+            paddingBytesCopied += paddingBytesToCopyThisChunk;
+            paddingBytesToCopy -= paddingBytesCopied;
+
+            // copy message length bytes
+            if (paddingBytesCopied == paddingSize)
+            {
+                const u64 messageSizeInBits = messageSize * 8;
+                memcpy(chunk + messageBytesToCopyThisChunk + paddingBytesToCopyThisChunk,
+                       &messageSizeInBits,
+                       8);
+            }
+        }
+
+        fprintf(stderr,
+                "Debug: messageBytesCopied (after): %zu\n"
+                "       paddingBytesCopied (after): %zu\n",
+                messageBytesCopied,
+                paddingBytesCopied);
+
+        fprintf(stderr, "Debug: CHUNK BYTES:\n");
+        for (size_t i = 0; i < MD5_CHUNK_SIZE; i++)
+        {
+            fprintf(stderr, "%02X", chunk[i]);
+            if (i % 16 == 15)
+            {
+                fprintf(stderr, "\n");
+            }
+            else if (i % 4 == 3)
+            {
+                fprintf(stderr, "  ");
+            }
+            else
+            {
+                fprintf(stderr, " ");
+            }
+        }
+        fprintf(stderr, "\n");
+
+        u32* m = (u32*)chunk;
+        u32 a = a0;
+        u32 b = b0;
+        u32 c = c0;
+        u32 d = d0;
+        for (u32 i = 0; i < MD5_CHUNK_SIZE; i++)
+        {
+            u32 f, g;
+            if (i < 16)
+            {
+                f = (b & c) | ((~b) & d);
+                g = i;
+            }
+            else if (i < 32)
+            {
+                f = (b & d) | (c & (~d));
+                g = (5*i + 1) % 16;
+            }
+            else if (i < 48)
+            {
+                f = b ^ c ^ d;
+                g = (3*i + 5) % 16;
+            }
+            else
+            {
+                f = c ^ (b | (~d));
+                g = (7*i) % 16;
+            }
+            f = f + a + k[i] + m[g];
+            a = d;
+            d = c;
+            c = b;
+            b = b + ((f << s[i]) | (f >> (32 - s[i])));
+        }
+        a0 += a;
+        b0 += b;
+        c0 += c;
+        d0 += d;
+    }
+
+    hash->A = a0;
+    hash->B = b0;
+    hash->C = c0;
+    hash->D = d0;
+}
+
+void HashMd5_Write(HashMd5* hash, FILE* f)
+{
+    assert(hash != nil);
+    assert(f != nil);
+    for (u32 i = 0; i < 16; i++)
+    {
+        fprintf(f, "%02X", hash->Bytes[i]);
+    }
+}
+
 
 /**
  * [SEC20] Типы данных
