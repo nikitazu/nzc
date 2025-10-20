@@ -1,4 +1,6 @@
 #define NZC_NZC_IMPLEMENTATION
+#define NZC_NZC_MD5_HASH_ENABLED
+//#define NZC_NZC_MD5_HASH_DEBUG_PRINT_CHUNK_MEMORY_ENABLED
 #define NZC_NZC_DOUBLY_LINKED_LIST_ENABLED
 #define NZC_NZC_BINARY_SEARCH_TREE_LIST_ENABLED
 #include "nzc.h"
@@ -234,45 +236,43 @@ void TEST_HashMd5(bool* success)
 {
     PRINT("TEST Hash (MD5)");
 
+    struct { const char* Input; const char* Md5; } testData[] = {
+        { "",                                            "D41D8CD98F00B204E9800998ECF8427E" },
+        { "a",                                           "0CC175B9C0F1B6A831C399E269772661" },
+        { "abc",                                         "900150983CD24FB0D6963F7D28E17F72" },
+        { "The quick brown fox jumps over the lazy dog", "9E107D9D372BB6826BD81D3542A419D6" },
+        { "Сообщение с разбитым паддингом",              "9D478EB7B8A77B97C2E1526BECFE1DE0" },
+        { "Сообщение с хвостом на втором блоке!",        "95AC563437C6F3AD955DAB5CF77A8A54" },
+        { "Сообщение тютелька в тютельку=========",      "50C4381DD030C32BF86711843356369C" },
+    };
+
     HashMd5 hash;
     String input;
+    String expected;
+    struct { char Data[MD5_STRING_LENGTH + 1]; size_t Size; }
+        output = {.Size = MD5_STRING_LENGTH + 1};
 
-    input = String_FromChars("");
-    HashMd5_Compute(&hash, (void*)input.Str, input.Length);
-    HashMd5_Write(&hash, stderr);
-    putc('\n', stderr);
-
-    input = String_FromChars("a");
-    HashMd5_Compute(&hash, (void*)input.Str, input.Length);
-    HashMd5_Write(&hash, stderr);
-    putc('\n', stderr);
-
-    input = String_FromChars("abc");
-    HashMd5_Compute(&hash, (void*)input.Str, input.Length);
-    HashMd5_Write(&hash, stderr);
-    putc('\n', stderr);
-
-    input = String_FromChars("The quick brown fox jumps over the lazy dog");
-    HashMd5_Compute(&hash, (void*)input.Str, input.Length);
-    HashMd5_Write(&hash, stderr);
-    putc('\n', stderr);
-
-    input = String_FromChars("Сообщение с разбитым паддингом");
-    HashMd5_Compute(&hash, (void*)input.Str, input.Length);
-    HashMd5_Write(&hash, stderr);
-    putc('\n', stderr);
-
-    input = String_FromChars("Сообщение с хвостом на втором блоке!");
-    HashMd5_Compute(&hash, (void*)input.Str, input.Length);
-    HashMd5_Write(&hash, stderr);
-    putc('\n', stderr);
-
-    input = String_FromChars("Сообщение тютелька в тютельку=========");
-    HashMd5_Compute(&hash, (void*)input.Str, input.Length);
-    HashMd5_Write(&hash, stderr);
-    putc('\n', stderr);
+    for (u32 i = 0; i < ARRAY_STATIC_COUNT(testData); i++)
+    {
+        input = String_FromChars(testData[i].Input);
+        expected = String_FromChars(testData[i].Md5);
+        HashMd5_Compute(&hash, (void*)input.Str, input.Length);
+        HashMd5_WriteStringToBuffer(&hash, output.Data, output.Size);
+        bool md5correct = String_EqualChars(expected, output.Data);
+        if (!md5correct)
+        {
+            fprintf(stderr, "Input: '%s'\n", input.Str);
+            PRINT_Failed("%s", "HashMd5_Compute", expected.Str, output.Data);
+            goto failed;
+        }
+    }
 
     PRINT("TEST Hash (MD5) - OK");
+    return;
+
+failed:
+    PRINT("TEST Hash (MD5) - FAILED");
+    *success = false;
 }
 
 void TEST_Arena(bool* success)

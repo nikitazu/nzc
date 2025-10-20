@@ -2,57 +2,59 @@
 #define NZC_NZC_H
 
 /**
- * Nikita Zuev Common Code Library v3.0.0
+ * Nikita Zuev Common Code Library v3.1.0
  * ======================================
  *
- * [SEC00] Навигация
- * -----------------
+ * [SEC00] ОГЛ Навигация
+ * ---------------------
  *
- * [SEC01] Инструкция
- * [SEC02] АПИ
- * [SEC03] Реализация
+ * [SEC01] ОГЛ Инструкция
+ * [SEC02] ОГЛ АПИ
+ * [SEC03] ОГЛ Реализация
  *
- * [SEC10] База
- * ------------
- * [SEC11] Зависимости от стандартной библиотеки C
- * [SEC12] Стандартные типы и литералы
- * [SEC13] Макросы на каждый день
- * [SEC14] Простая математика
- * [SEC15] Хеши
+ * [SEC10] ОГЛ База
+ * ----------------
+ * [SEC11] ОГЛ Зависимости от стандартной библиотеки C
+ * [SEC12] ОГЛ Стандартные типы и литералы
+ * [SEC13] ОГЛ Макросы на каждый день
+ * [SEC14] ОГЛ Простая математика
  *
- * [SEC20] Типы данных
- * -------------------
- * [SEC21] Аллокатор типа арена
- * [SEC22] Векторы 2D
- * [SEC23] Строки
- * [SEC24] Парсинг чисел
+ * [SEC20] ОГЛ Типы данных
+ * -----------------------
+ * [SEC21] ОГЛ Аллокатор типа арена
+ * [SEC22] ОГЛ Векторы 2D
+ * [SEC23] ОГЛ Строки
+ * [SEC24] ОГЛ Парсинг чисел
+ * [SEC25] ОГЛ Хеши
  *
- * [SEC30] Контейнеры
- * ------------------
- * [SEC31] Двое-связанный список
- * [SEC32] Бинарное древо
+ * [SEC30] ОГЛ Контейнеры
+ * ----------------------
+ * [SEC31] ОГЛ Двое-связанный список
+ * [SEC32] ОГЛ Бинарное древо
  *
- * [SEC40] Логирование (ДЕЛА думаю логи следует вытащить в отдельный файл)
+ * [SEC40] ОГЛ Логирование (ДЕЛА думаю логи следует вытащить в отдельный файл)
  */
 
 /**
- * [SEC01] Инструкция
- * ==================
+ * [SEC01] ЗАГ Инструкция
+ * ======================
  *
  * // Подключите заголовочный файл
- * #define NZC_NZC_IMPLEMENTATION                  // определить флаг в файле реализации
- * #define NZC_NZC_DOUBLY_LINKED_LIST_ENABLED      // подключить двое-связанный список
- * #define NZC_NZC_BINARY_SEARCH_TREE_LIST_ENABLED // подключить бинарное поисковое древо
+ * #define NZC_NZC_IMPLEMENTATION                            // определить флаг в файле реализации
+ * #define NZC_NZC_MD5_HASH_ENABLED                          // включить алгоритм хеширования MD5
+ * #define NZC_NZC_MD5_HASH_DEBUG_PRINT_CHUNK_MEMORY_ENABLED // включить отладочную печать MD5
+ * #define NZC_NZC_DOUBLY_LINKED_LIST_ENABLED                // включить двое-связанный список
+ * #define NZC_NZC_BINARY_SEARCH_TREE_LIST_ENABLED           // включить бинарное поисковое древо
  * #include "nzc.h"
  */
 
 /**
- * [SEC02] АПИ
- * ===========
+ * [SEC02] ЗАГ АПИ
+ * ===============
  *
- * [SEC10] База
- * ------------
- * [SEC11] Зависимости от стандартной библиотеки C
+ * [SEC10] ЗАГ База
+ * ----------------
+ * [SEC11] ЗАГ Зависимости от стандартной библиотеки C
  */
 
 #include <assert.h>
@@ -65,7 +67,7 @@
 #include <stddef.h>
 
 /**
- * [SEC12] Стандартные типы и литералы
+ * [SEC12] ЗАГ Стандартные типы и литералы
  */
 
 #ifndef NZC_NZC_H__COMMON_TYPES
@@ -105,7 +107,7 @@ typedef double f64;
 #endif // NZC_NZC_H__COMMON_TYPES
 
 /**
- * [SEC13] Макросы на каждый день
+ * [SEC13] ЗАГ Макросы на каждый день
  */
 
 #define f32_FMT "%f"
@@ -117,7 +119,10 @@ typedef double f64;
 
 #define UNUSED(x) (void)(x)
 #define NAMEOF(x) (#x)
-#define KB(x) (x * 1024)
+#define KB(x) ((x) * 1024)
+
+#define ARRAY_STATIC_COUNT(ARR) \
+    (sizeof(ARR) / sizeof(ARR[0]))
 
 /**
  * Хитрый макрос линуксоидов
@@ -136,17 +141,17 @@ typedef double f64;
 #endif // NZC_CONTAINER_OF
 
 /**
- * [SEC14] Простая математика
+ * [SEC14] ЗАГ Простая математика
  */
-#define Math_Define(T)                                  \
-    inline T T##_Clamp(T v, T vmin, T vmax)             \
-    {                                                   \
-        return v < vmin ? vmin : (v > vmax ? vmax : v); \
-    }                                                   \
-                                                        \
-    inline void T##_ClampAssign(T* v, T vmin, T vmax)   \
-    {                                                   \
-        *v = T##_Clamp(*v, vmin, vmax);                 \
+#define Math_Define(T)                                                  \
+    inline T T##_Clamp(T v, T vmin, T vmax)                             \
+    {                                                                   \
+        return (v) < (vmin) ? (vmin) : ((v) > (vmax) ? (vmax) : (v));   \
+    }                                                                   \
+                                                                        \
+    inline void T##_ClampAssign(T* v, T vmin, T vmax)                   \
+    {                                                                   \
+        *v = T##_Clamp(*(v), (vmin), (vmax));                           \
     }
 
 Math_Define(i32);
@@ -159,235 +164,9 @@ Math_Define(u64);
 #undef Math_Define
 
 /**
- * [SEC15] Хеши
- */
-
-#define MD5_CHUNK_SIZE          64
-#define MD5_MESSAGE_LENGTH_SIZE 8
-#define MD5_PADDING_FIRST_BYTE  0x80
-#define MD5_PADDING_FILL_BYTE   0x00
-
-typedef struct HashMd5
-{
-    union
-    {
-        u8 Bytes[16];
-        struct
-        {
-            u32 A;
-            u32 B;
-            u32 C;
-            u32 D;
-        };
-    };
-} HashMd5;
-
-void HashMd5_Compute(HashMd5* hash, u8* buffer, size_t size)
-{
-    assert(hash != nil);
-    assert(buffer != nil);
-    fprintf(stderr, "input size is %d\n", (i32)size);
-    // TODO use static initialization
-    // TODO hide under flag to not waste memory if unused
-    u32 s[64] = {
-        7, 12, 17, 22,  7, 12, 17, 22,  7, 12, 17, 22,  7, 12, 17, 22,
-        5,  9, 14, 20,  5,  9, 14, 20,  5,  9, 14, 20,  5,  9, 14, 20,
-        4, 11, 16, 23,  4, 11, 16, 23,  4, 11, 16, 23,  4, 11, 16, 23,
-        6, 10, 15, 21,  6, 10, 15, 21,  6, 10, 15, 21,  6, 10, 15, 21,
-    };
-    u32 k[64] = {
-        0xd76aa478, 0xe8c7b756, 0x242070db, 0xc1bdceee,
-        0xf57c0faf, 0x4787c62a, 0xa8304613, 0xfd469501,
-        0x698098d8, 0x8b44f7af, 0xffff5bb1, 0x895cd7be,
-        0x6b901122, 0xfd987193, 0xa679438e, 0x49b40821,
-        0xf61e2562, 0xc040b340, 0x265e5a51, 0xe9b6c7aa,
-        0xd62f105d, 0x02441453, 0xd8a1e681, 0xe7d3fbc8,
-        0x21e1cde6, 0xc33707d6, 0xf4d50d87, 0x455a14ed,
-        0xa9e3e905, 0xfcefa3f8, 0x676f02d9, 0x8d2a4c8a,
-        0xfffa3942, 0x8771f681, 0x6d9d6122, 0xfde5380c,
-        0xa4beea44, 0x4bdecfa9, 0xf6bb4b60, 0xbebfbc70,
-        0x289b7ec6, 0xeaa127fa, 0xd4ef3085, 0x04881d05,
-        0xd9d4d039, 0xe6db99e5, 0x1fa27cf8, 0xc4ac5665,
-        0xf4292244, 0x432aff97, 0xab9423a7, 0xfc93a039,
-        0x655b59c3, 0x8f0ccc92, 0xffeff47d, 0x85845dd1,
-        0x6fa87e4f, 0xfe2ce6e0, 0xa3014314, 0x4e0811a1,
-        0xf7537e82, 0xbd3af235, 0x2ad7d2bb, 0xeb86d391,
-    };
-
-    u32 a0 = 0x67452301;
-    u32 b0 = 0xefcdab89;
-    u32 c0 = 0x98badcfe;
-    u32 d0 = 0x10325476;
-
-    const size_t messageSize     = size;
-    const size_t messageTailSize = messageSize % MD5_CHUNK_SIZE;
-    const size_t paddingSize     = (MD5_CHUNK_SIZE - messageTailSize > MD5_MESSAGE_LENGTH_SIZE)
-                                 ? (MD5_CHUNK_SIZE - messageTailSize - MD5_MESSAGE_LENGTH_SIZE)
-                                 : (2 * MD5_CHUNK_SIZE - messageTailSize - MD5_MESSAGE_LENGTH_SIZE);
-    const size_t totalSize       = messageSize + paddingSize + MD5_MESSAGE_LENGTH_SIZE;
-    const size_t chunkCount      = totalSize / MD5_CHUNK_SIZE;
-
-    fprintf(stderr, // 43 43 13 64 1
-            "Debug: messageSize:     %zu\n"
-            "       messageTailSize: %zu\n"
-            "       paddingSize:     %zu\n"
-            "       totalSize:       %zu\n"
-            "       chunkCount:      %zu\n",
-            messageSize,
-            messageTailSize,
-            paddingSize,
-            totalSize,
-            chunkCount);
-
-    u8 chunk[MD5_CHUNK_SIZE];
-
-    size_t messageBytesToCopy = messageSize;
-    size_t paddingBytesToCopy = paddingSize;
-    size_t messageBytesCopied = 0;
-    size_t paddingBytesCopied = 0;
-
-    for (size_t chunkId = 0; chunkId < chunkCount; chunkId++)
-    {
-        const size_t offset = chunkId * MD5_CHUNK_SIZE;
-
-        fprintf(stderr,
-                "Debug: chunkId:                     %zu\n"
-                "       offset:                      %zu\n"
-                "       messageBytesCopied (before): %zu\n"
-                "       paddingBytesCopied (before): %zu\n",
-                chunkId,
-                offset,
-                messageBytesCopied,
-                paddingBytesCopied);
-
-        // copy message bytes
-        const size_t messageBytesToCopyThisChunk = messageBytesToCopy > MD5_CHUNK_SIZE
-            ? MD5_CHUNK_SIZE
-            : messageBytesToCopy;
-
-        if (messageBytesToCopyThisChunk > 0)
-        {
-            memcpy(chunk, buffer + offset, messageBytesToCopyThisChunk);
-            messageBytesCopied += messageBytesToCopyThisChunk;
-            messageBytesToCopy -= messageBytesCopied;
-        }
-
-        // copy padding bytes
-        const size_t chunkSizeRemains = MD5_CHUNK_SIZE - messageBytesToCopyThisChunk;
-        if (chunkSizeRemains > 0)
-        {
-            const size_t paddingBytesToCopyThisChunk = paddingBytesToCopy > chunkSizeRemains
-                ? chunkSizeRemains
-                : paddingBytesToCopy;
-
-            memset(chunk + messageBytesToCopyThisChunk,
-                   MD5_PADDING_FILL_BYTE,
-                   paddingBytesToCopyThisChunk);
-
-            if (paddingBytesCopied == 0)
-            {
-                chunk[messageBytesToCopyThisChunk] = MD5_PADDING_FIRST_BYTE;
-            }
-
-            paddingBytesCopied += paddingBytesToCopyThisChunk;
-            paddingBytesToCopy -= paddingBytesCopied;
-
-            // copy message length bytes
-            if (paddingBytesCopied == paddingSize)
-            {
-                const u64 messageSizeInBits = messageSize * 8;
-                memcpy(chunk + messageBytesToCopyThisChunk + paddingBytesToCopyThisChunk,
-                       &messageSizeInBits,
-                       8);
-            }
-        }
-
-        fprintf(stderr,
-                "Debug: messageBytesCopied (after): %zu\n"
-                "       paddingBytesCopied (after): %zu\n",
-                messageBytesCopied,
-                paddingBytesCopied);
-
-        fprintf(stderr, "Debug: CHUNK BYTES:\n");
-        for (size_t i = 0; i < MD5_CHUNK_SIZE; i++)
-        {
-            fprintf(stderr, "%02X", chunk[i]);
-            if (i % 16 == 15)
-            {
-                fprintf(stderr, "\n");
-            }
-            else if (i % 4 == 3)
-            {
-                fprintf(stderr, "  ");
-            }
-            else
-            {
-                fprintf(stderr, " ");
-            }
-        }
-        fprintf(stderr, "\n");
-
-        u32* m = (u32*)chunk;
-        u32 a = a0;
-        u32 b = b0;
-        u32 c = c0;
-        u32 d = d0;
-        for (u32 i = 0; i < MD5_CHUNK_SIZE; i++)
-        {
-            u32 f, g;
-            if (i < 16)
-            {
-                f = (b & c) | ((~b) & d);
-                g = i;
-            }
-            else if (i < 32)
-            {
-                f = (b & d) | (c & (~d));
-                g = (5*i + 1) % 16;
-            }
-            else if (i < 48)
-            {
-                f = b ^ c ^ d;
-                g = (3*i + 5) % 16;
-            }
-            else
-            {
-                f = c ^ (b | (~d));
-                g = (7*i) % 16;
-            }
-            f = f + a + k[i] + m[g];
-            a = d;
-            d = c;
-            c = b;
-            b = b + ((f << s[i]) | (f >> (32 - s[i])));
-        }
-        a0 += a;
-        b0 += b;
-        c0 += c;
-        d0 += d;
-    }
-
-    hash->A = a0;
-    hash->B = b0;
-    hash->C = c0;
-    hash->D = d0;
-}
-
-void HashMd5_Write(HashMd5* hash, FILE* f)
-{
-    assert(hash != nil);
-    assert(f != nil);
-    for (u32 i = 0; i < 16; i++)
-    {
-        fprintf(f, "%02X", hash->Bytes[i]);
-    }
-}
-
-
-/**
- * [SEC20] Типы данных
- * -------------------
- * [SEC21] Аллокатор типа арена
+ * [SEC20] ЗАГ Типы данных
+ * -----------------------
+ * [SEC21] ЗАГ Аллокатор типа арена
  */
 
 /**
@@ -455,7 +234,7 @@ void Arena_Free(Arena* arena);
 Arena* Arena_CreateChild(Arena* parent, size_t size);
 
 /**
- * [SEC22] Векторы 2D
+ * [SEC22] ЗАГ Векторы 2D
  */
 
 #define Vec2_Define(T)                                          \
@@ -552,7 +331,7 @@ typedef Vec2u64 ulvec2;
 #define Vec2u64_FMT "{%lld;%lld}"
 
 /**
- * [SEC23] Строки
+ * [SEC23] ЗАГ Строки
  */
 
 /**
@@ -662,7 +441,7 @@ char* str_SearchIgnoreCase(const char* haystack, const char* needle);
 bool str_IsPositiveInt32(const char* s);
 
 /**
- * [SEC24] Парсинг
+ * [SEC24] ЗАГ Парсинг чисел
  */
 
 /**
@@ -696,9 +475,112 @@ i64 i64_Parse(const char* buffer, size_t offset, size_t count);
 f32 f32_Parse(const char* buffer, size_t offset, size_t count);
 
 /**
- * [SEC30] Контейнеры
- * ------------------
- * [SEC31] Двое-связанный список
+ * [SEC25] ЗАГ Хеши
+ */
+
+#ifdef NZC_NZC_MD5_HASH_ENABLED
+
+/** Размер блока MD5, в байтах */
+#define MD5_CHUNK_SIZE          64
+
+/**
+ * Размер сегмента с длиной сообщения, в байтах.
+ * Примечание:
+ *   не запутаться бы, само значение длины в битах,
+ *   а вот данная константа - это размер области памяти
+ *   где будет длина расположена, и этот размер в байтах.
+ */
+#define MD5_MESSAGE_LENGTH_SIZE 8
+
+/** Первый байт выравнивания */
+#define MD5_PADDING_FIRST_BYTE  0x80
+
+/** Прочие байты выравнивания */
+#define MD5_PADDING_FILL_BYTE   0x00
+
+/** Размер массива с данными MD5, в байтах */
+#define MD5_BYTE_ARRAY_SIZE     16
+
+/** Длина HEX-строки MD5, в символах */
+#define MD5_STRING_LENGTH       32
+
+/** Вектор инициализации MD5, компонент A */
+#define MD5_IV_A                0x67452301
+
+/** Вектор инициализации MD5, компонент B */
+#define MD5_IV_B                0xEFCDAB89
+
+/** Вектор инициализации MD5, компонент C */
+#define MD5_IV_C                0x98BADCFE
+
+/** Вектор инициализации MD5, компонент D */
+#define MD5_IV_D                0x10325476
+
+/**
+ * Буфер данных MD5.
+ *
+ * @field Bytes массив байтов MD5
+ * @field A     первая компонента MD5
+ * @field B     вторая компонента MD5
+ * @field C     третья компонента MD5
+ * @field D     четвёртая компонента MD5
+ */
+typedef struct HashMd5
+{
+    union
+    {
+        u8 Bytes[MD5_BYTE_ARRAY_SIZE];
+        struct
+        {
+            u32 A;
+            u32 B;
+            u32 C;
+            u32 D;
+        };
+    };
+} HashMd5;
+
+/**
+ * Рассчитать хеш MD5.
+ *
+ * Наполняет буфер `hash' байтами контрольной суммы,
+ * используя байты из буфера `buffer' в количестве `size'
+ * в качестве источника данных.
+ *
+ * @param hash   буфер для наполнения контрольной суммой
+ * @param buffer буфер для чтения исходных данных
+ * @param size   количество байт в `buffer'
+ */
+void HashMd5_Compute(HashMd5* hash, u8* buffer, size_t size);
+
+/**
+ * Вывести хеш MD5 в файл.
+ *
+ * Печатает байты из буфера `hash' как HEX-строку в файл `f'.
+ *
+ * @param hash буфер с контрльной суммой MD5
+ * @param f    файл для вывода
+ */
+void HashMd5_Write(HashMd5* hash, FILE* f);
+
+/**
+ * Вывести хеш MD5 в буфер.
+ *
+ * Печатает байты из буфера `hash' как HEX-строку в буфер `buffer'.
+ *
+ * @param hash          буфер с контрльной суммой MD5
+ * @param outBuffer     буфер для вывода
+ * @param outBufferSize размер буфера `buffer'
+ * @return              признак успеха операции
+ */
+bool HashMd5_WriteStringToBuffer(HashMd5* hash, char* outBuffer, size_t outBufferSize);
+
+#endif // NZC_NZC_MD5_HASH_ENABLED
+
+/**
+ * [SEC30] ЗАГ Контейнеры
+ * ----------------------
+ * [SEC31] ЗАГ Двое-связанный список
  */
 
 #ifdef NZC_NZC_DOUBLY_LINKED_LIST_ENABLED
@@ -744,7 +626,7 @@ void DLNode_Concat(DLNode* list1, DLNode* list2);
 #endif // NZC_NZC_DOUBLY_LINKED_LIST_ENABLED
 
 /**
- * [SEC32] Бинарное древо
+ * [SEC32] ЗАГ Бинарное древо
  */
 
 #ifdef NZC_NZC_BINARY_SEARCH_TREE_LIST_ENABLED
@@ -782,7 +664,7 @@ void BST_WalkInOrder(BST* t, void* accum, BST_WalkProc proc);
 #endif // NZC_NZC_BINARY_SEARCH_TREE_LIST_ENABLED
 
 /**
- * [SEC40] Логирование
+ * [SEC40] ЗАГ Логирование
  */
 
 #ifdef NZC_LOG_ENABLED
@@ -847,9 +729,9 @@ static LogContext G_NZC_Log;
 #ifdef NZC_NZC_IMPLEMENTATION
 
 /**
- * [SEC20] Типы данных
- * -------------------
- * [SEC21] Аллокатор типа арена
+ * [SEC20] РЕА Типы данных
+ * -----------------------
+ * [SEC21] РЕА Аллокатор типа арена
  */
 
 Arena Arena_Create(size_t size)
@@ -930,7 +812,7 @@ Arena* Arena_CreateChild(Arena* parent, size_t size)
 }
 
 /**
- * [SEC23] Строки
+ * [SEC23] РЕА Строки
  */
 
 String String_FromChars(const char* str)
@@ -1037,7 +919,7 @@ bool str_IsPositiveInt32(const char* s)
 }
 
 /**
- * [SEC24] Парсинг
+ * [SEC24] РЕА Парсинг чисел
  */
 
 i32 i32_Parse(const char* buffer, size_t offset, size_t count)
@@ -1136,9 +1018,214 @@ f32 f32_Parse(const char* buffer, size_t offset, size_t count)
 }
 
 /**
- * [SEC30] Контейнеры
- * ------------------
- * [SEC31] Двое-связанный список
+ * [SEC25] РЕА Хеши
+ */
+
+#ifdef NZC_NZC_MD5_HASH_ENABLED
+
+void DebugPrintMemory(FILE* f, u8* buffer, size_t size)
+{
+    fprintf(stderr,
+            "Debug: memory dump\n"
+            "       ");
+
+    for (size_t i = 0; i < size; i++)
+    {
+        fprintf(stderr, "%02X", buffer[i]);
+        if (i == size - 1)
+        {
+            fprintf(stderr, "\n");
+        }
+        else if (i % 16 == 15)
+        {
+            fprintf(stderr, "\n       ");
+        }
+        else if (i % 4 == 3)
+        {
+            fprintf(stderr, "  ");
+        }
+        else
+        {
+            fprintf(stderr, " ");
+        }
+    }
+}
+
+static u32 g_Md5Table_S[64] = {
+    7, 12, 17, 22,  7, 12, 17, 22,  7, 12, 17, 22,  7, 12, 17, 22,
+    5,  9, 14, 20,  5,  9, 14, 20,  5,  9, 14, 20,  5,  9, 14, 20,
+    4, 11, 16, 23,  4, 11, 16, 23,  4, 11, 16, 23,  4, 11, 16, 23,
+    6, 10, 15, 21,  6, 10, 15, 21,  6, 10, 15, 21,  6, 10, 15, 21,
+};
+
+static u32 g_Md5TableK[64] = {
+    0xd76aa478, 0xe8c7b756, 0x242070db, 0xc1bdceee,
+    0xf57c0faf, 0x4787c62a, 0xa8304613, 0xfd469501,
+    0x698098d8, 0x8b44f7af, 0xffff5bb1, 0x895cd7be,
+    0x6b901122, 0xfd987193, 0xa679438e, 0x49b40821,
+    0xf61e2562, 0xc040b340, 0x265e5a51, 0xe9b6c7aa,
+    0xd62f105d, 0x02441453, 0xd8a1e681, 0xe7d3fbc8,
+    0x21e1cde6, 0xc33707d6, 0xf4d50d87, 0x455a14ed,
+    0xa9e3e905, 0xfcefa3f8, 0x676f02d9, 0x8d2a4c8a,
+    0xfffa3942, 0x8771f681, 0x6d9d6122, 0xfde5380c,
+    0xa4beea44, 0x4bdecfa9, 0xf6bb4b60, 0xbebfbc70,
+    0x289b7ec6, 0xeaa127fa, 0xd4ef3085, 0x04881d05,
+    0xd9d4d039, 0xe6db99e5, 0x1fa27cf8, 0xc4ac5665,
+    0xf4292244, 0x432aff97, 0xab9423a7, 0xfc93a039,
+    0x655b59c3, 0x8f0ccc92, 0xffeff47d, 0x85845dd1,
+    0x6fa87e4f, 0xfe2ce6e0, 0xa3014314, 0x4e0811a1,
+    0xf7537e82, 0xbd3af235, 0x2ad7d2bb, 0xeb86d391,
+};
+
+void HashMd5_Compute(HashMd5* hash, u8* buffer, size_t size)
+{
+    assert(hash != nil);
+    assert(buffer != nil);
+
+    const size_t messageSize     = size;
+    const size_t messageTailSize = messageSize % MD5_CHUNK_SIZE;
+    const size_t paddingSize     = (MD5_CHUNK_SIZE - messageTailSize > MD5_MESSAGE_LENGTH_SIZE)
+                                 ? (MD5_CHUNK_SIZE - messageTailSize - MD5_MESSAGE_LENGTH_SIZE)
+                                 : (2 * MD5_CHUNK_SIZE - messageTailSize - MD5_MESSAGE_LENGTH_SIZE);
+    const size_t totalSize       = messageSize + paddingSize + MD5_MESSAGE_LENGTH_SIZE;
+    const size_t chunkCount      = totalSize / MD5_CHUNK_SIZE;
+
+    u8 chunk[MD5_CHUNK_SIZE];
+
+    size_t messageBytesToCopy = messageSize;
+    size_t paddingBytesToCopy = paddingSize;
+    size_t messageBytesCopied = 0;
+    size_t paddingBytesCopied = 0;
+
+    u32 a0 = MD5_IV_A;
+    u32 b0 = MD5_IV_B;
+    u32 c0 = MD5_IV_C;
+    u32 d0 = MD5_IV_D;
+
+    for (size_t chunkId = 0; chunkId < chunkCount; chunkId++)
+    {
+        const size_t offset = chunkId * MD5_CHUNK_SIZE;
+
+        // copy message bytes
+        const size_t messageBytesToCopyThisChunk = messageBytesToCopy > MD5_CHUNK_SIZE
+            ? MD5_CHUNK_SIZE
+            : messageBytesToCopy;
+
+        if (messageBytesToCopyThisChunk > 0)
+        {
+            memcpy(chunk, buffer + offset, messageBytesToCopyThisChunk);
+            messageBytesCopied += messageBytesToCopyThisChunk;
+            messageBytesToCopy -= messageBytesCopied;
+        }
+
+        // copy padding bytes
+        const size_t chunkSizeRemains = MD5_CHUNK_SIZE - messageBytesToCopyThisChunk;
+        if (chunkSizeRemains > 0)
+        {
+            const size_t paddingBytesToCopyThisChunk = paddingBytesToCopy > chunkSizeRemains
+                ? chunkSizeRemains
+                : paddingBytesToCopy;
+
+            memset(chunk + messageBytesToCopyThisChunk,
+                   MD5_PADDING_FILL_BYTE,
+                   paddingBytesToCopyThisChunk);
+
+            if (paddingBytesCopied == 0)
+            {
+                chunk[messageBytesToCopyThisChunk] = MD5_PADDING_FIRST_BYTE;
+            }
+
+            paddingBytesCopied += paddingBytesToCopyThisChunk;
+            paddingBytesToCopy -= paddingBytesCopied;
+
+            // copy message length bytes
+            if (paddingBytesCopied == paddingSize)
+            {
+                const u64 messageSizeInBits = messageSize * 8;
+                memcpy(chunk + messageBytesToCopyThisChunk + paddingBytesToCopyThisChunk,
+                       &messageSizeInBits,
+                       8);
+            }
+        }
+
+#ifdef NZC_NZC_MD5_HASH_DEBUG_PRINT_CHUNK_MEMORY_ENABLED
+        DebugPrintMemory(stderr, chunk, MD5_CHUNK_SIZE);
+#endif // NZC_NZC_MD5_HASH_DEBUG_PRINT_CHUNK_MEMORY_ENABLED
+
+        u32* m = (u32*)chunk;
+        u32 a = a0;
+        u32 b = b0;
+        u32 c = c0;
+        u32 d = d0;
+        for (u32 i = 0; i < MD5_CHUNK_SIZE; i++)
+        {
+            u32 f, g;
+            if (i < 16)
+            {
+                f = (b & c) | ((~b) & d);
+                g = i;
+            }
+            else if (i < 32)
+            {
+                f = (b & d) | (c & (~d));
+                g = (5*i + 1) % 16;
+            }
+            else if (i < 48)
+            {
+                f = b ^ c ^ d;
+                g = (3*i + 5) % 16;
+            }
+            else
+            {
+                f = c ^ (b | (~d));
+                g = (7*i) % 16;
+            }
+            f = f + a + g_Md5TableK[i] + m[g];
+            a = d;
+            d = c;
+            c = b;
+            b = b + ((f << g_Md5Table_S[i]) | (f >> (32 - g_Md5Table_S[i])));
+        }
+        a0 += a;
+        b0 += b;
+        c0 += c;
+        d0 += d;
+    }
+
+    hash->A = a0;
+    hash->B = b0;
+    hash->C = c0;
+    hash->D = d0;
+}
+
+void HashMd5_Write(HashMd5* hash, FILE* f)
+{
+    assert(hash != nil);
+    assert(f != nil);
+    for (u32 i = 0; i < MD5_BYTE_ARRAY_SIZE; i++)
+    {
+        fprintf(f, "%02X", hash->Bytes[i]);
+    }
+}
+
+bool HashMd5_WriteStringToBuffer(HashMd5* hash, char* outBuffer, size_t outBufferSize)
+{
+    assert(hash != nil);
+    assert(outBuffer != nil);
+    if (outBufferSize < MD5_STRING_LENGTH) { return false; }
+    for (u32 i = 0; i < MD5_BYTE_ARRAY_SIZE; i++)
+    {
+        sprintf(outBuffer + 2*i, "%02X", hash->Bytes[i]);
+    }
+    return true;
+}
+
+#endif // NZC_NZC_MD5_HASH_ENABLED
+
+/**
+ * [SEC30] РЕА Контейнеры
+ * ----------------------
+ * [SEC31] РЕА Двое-связанный список
  */
 
 #ifdef NZC_NZC_DOUBLY_LINKED_LIST_ENABLED
@@ -1234,7 +1321,7 @@ void DLNode_Concat(DLNode* list1, DLNode* list2)
 #endif // NZC_NZC_DOUBLY_LINKED_LIST_ENABLED
 
 /**
- * [SEC32] Бинарное древо
+ * [SEC32] РЕА Бинарное древо
  */
 
 #ifdef NZC_NZC_BINARY_SEARCH_TREE_LIST_ENABLED
