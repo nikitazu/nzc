@@ -18,6 +18,7 @@
  * [SEC12] ОГЛ Стандартные типы и литералы
  * [SEC13] ОГЛ Макросы на каждый день
  * [SEC14] ОГЛ Простая математика
+ * [SEC15] ОГЛ Операции над байтами
  *
  * [SEC20] ОГЛ Типы данных
  * -----------------------
@@ -124,6 +125,9 @@ typedef double f64;
 #define ARRAY_STATIC_COUNT(ARR) \
     (sizeof(ARR) / sizeof(ARR[0]))
 
+#define U32_ROTATE_BITS_LEFT(NUM, SIZE) \
+    (((NUM) << (SIZE)) | ((NUM) >> (32 - (SIZE))))
+
 /**
  * Хитрый макрос линуксоидов
  * (версия не требующая GCC или CLANG)
@@ -162,6 +166,32 @@ Math_Define(u32);
 Math_Define(u64);
 
 #undef Math_Define
+
+/**
+ * [SEC15] ЗАГ Операции над байтами
+ */
+
+typedef union FixedArrayU16
+{
+    u16 Value;
+    u8  Bytes[2];
+} FixedArrayU16;
+
+typedef union FixedArrayU32
+{
+    u32 Value;
+    u8  Bytes[4];
+} FixedArrayU32;
+
+typedef union FixedArrayU64
+{
+    u64 Value;
+    u8  Bytes[8];
+} FixedArrayU64;
+
+u16 u16_SwapBytes(u16 v);
+u32 u32_SwapBytes(u32 v);
+u64 u64_SwapBytes(u64 v);
 
 /**
  * [SEC20] ЗАГ Типы данных
@@ -524,6 +554,8 @@ f32 f32_Parse(const char* buffer, size_t offset, size_t count);
  * @field B     вторая компонента MD5
  * @field C     третья компонента MD5
  * @field D     четвёртая компонента MD5
+ *
+ * Примечание: см. [RFC-1321](doc/specs/rfc1321.txt)
  */
 typedef struct HashMd5
 {
@@ -576,6 +608,109 @@ void HashMd5_Write(HashMd5* hash, FILE* f);
 bool HashMd5_WriteStringToBuffer(HashMd5* hash, char* outBuffer, size_t outBufferSize);
 
 #endif // NZC_NZC_MD5_HASH_ENABLED
+
+#ifdef NZC_NZC_SHA1_HASH_ENABLED
+
+/** Размер блока SHA1, в байтах */
+#define SHA1_CHUNK_SIZE          64
+
+/**
+ * Размер сегмента с длиной сообщения, в байтах.
+ * Примечание:
+ *   не запутаться бы, само значение длины в битах,
+ *   а вот данная константа - это размер области памяти
+ *   где будет длина расположена, и этот размер в байтах.
+ */
+#define SHA1_MESSAGE_LENGTH_SIZE 8
+
+/** Первый байт выравнивания */
+#define SHA1_PADDING_FIRST_BYTE  0x80
+
+/** Прочие байты выравнивания */
+#define SHA1_PADDING_FILL_BYTE   0x00
+
+/** Размер массива с u32 элементами SHA1, в штуках */
+#define SHA1_U32_ARRAY_SIZE      5
+
+/** Размер массива с данными SHA1, в байтах */
+#define SHA1_BYTE_ARRAY_SIZE     20
+
+/** Длина HEX-строки SHA1, в символах */
+#define SHA1_STRING_LENGTH       40
+
+/** Вектор инициализации SHA1, компонент 0 */
+#define SHA1_IV_H0               0x67452301
+
+/** Вектор инициализации SHA1, компонент 1 */
+#define SHA1_IV_H1               0xEFCDAB89
+
+/** Вектор инициализации SHA1, компонент 2 */
+#define SHA1_IV_H2               0x98BADCFE
+
+/** Вектор инициализации SHA1, компонент 3 */
+#define SHA1_IV_H3               0x10325476
+
+/** Вектор инициализации SHA1, компонент 4 */
+#define SHA1_IV_H4               0xC3D2E1F0
+
+#define SHA1_K1 0x5A827999
+#define SHA1_K2 0x6ED9EBA1
+#define SHA1_K3 0x8F1BBCDC
+#define SHA1_K4 0xCA62C1D6
+
+/**
+ * Буфер данных SHA1.
+ *
+ * @field Bytes   массив байтов SHA1
+ * @field Numbers массив u32 чисел SHA1
+ *
+ * Примечание: см. [RFC-3174](doc/specs/rfc3174.txt)
+ */
+typedef struct HashSha1
+{
+    union
+    {
+        u8  Bytes[SHA1_BYTE_ARRAY_SIZE];
+        u32 Numbers[SHA1_U32_ARRAY_SIZE];
+    };
+} HashSha1;
+
+/**
+ * Рассчитать хеш SHA1.
+ *
+ * Наполняет буфер `hash' байтами контрольной суммы,
+ * используя байты из буфера `buffer' в количестве `size'
+ * в качестве источника данных.
+ *
+ * @param hash   буфер для наполнения контрольной суммой
+ * @param buffer буфер для чтения исходных данных
+ * @param size   количество байт в `buffer'
+ */
+void HashSha1_Compute(HashSha1* hash, u8* buffer, size_t size);
+
+/**
+ * Вывести хеш SHA1 в файл.
+ *
+ * Печатает байты из буфера `hash' как HEX-строку в файл `f'.
+ *
+ * @param hash буфер с контрльной суммой SHA1
+ * @param f    файл для вывода
+ */
+void HashSha1_Write(HashSha1* hash, FILE* f);
+
+/**
+ * Вывести хеш SHA1 в буфер.
+ *
+ * Печатает байты из буфера `hash' как HEX-строку в буфер `buffer'.
+ *
+ * @param hash          буфер с контрльной суммой SHA1
+ * @param outBuffer     буфер для вывода
+ * @param outBufferSize размер буфера `buffer'
+ * @return              признак успеха операции
+ */
+bool HashSha1_WriteStringToBuffer(HashSha1* hash, char* outBuffer, size_t outBufferSize);
+
+#endif // NZC_NZC_SHA1_HASH_ENABLED
 
 /**
  * [SEC30] ЗАГ Контейнеры
@@ -727,6 +862,46 @@ static LogContext G_NZC_Log;
  */
 
 #ifdef NZC_NZC_IMPLEMENTATION
+
+/* [SEC10] РЕА База
+ * ----------------
+ * [SEC15] РЕА Операции над байтами
+ */
+
+u16 u16_SwapBytes(u16 v)
+{
+    FixedArrayU16 a = { .Value = v };
+    FixedArrayU16 b;
+    b.Bytes[0] = a.Bytes[1];
+    b.Bytes[1] = a.Bytes[0];
+    return b.Value;
+}
+
+u32 u32_SwapBytes(u32 v)
+{
+    FixedArrayU32 a = { .Value = v };
+    FixedArrayU32 b;
+    b.Bytes[0] = a.Bytes[3];
+    b.Bytes[1] = a.Bytes[2];
+    b.Bytes[2] = a.Bytes[1];
+    b.Bytes[3] = a.Bytes[0];
+    return b.Value;
+}
+
+u64 u64_SwapBytes(u64 v)
+{
+    FixedArrayU64 a = { .Value = v };
+    FixedArrayU64 b;
+    b.Bytes[0] = a.Bytes[7];
+    b.Bytes[1] = a.Bytes[6];
+    b.Bytes[2] = a.Bytes[5];
+    b.Bytes[3] = a.Bytes[4];
+    b.Bytes[4] = a.Bytes[3];
+    b.Bytes[5] = a.Bytes[2];
+    b.Bytes[6] = a.Bytes[1];
+    b.Bytes[7] = a.Bytes[0];
+    return b.Value;
+}
 
 /**
  * [SEC20] РЕА Типы данных
@@ -1021,8 +1196,6 @@ f32 f32_Parse(const char* buffer, size_t offset, size_t count)
  * [SEC25] РЕА Хеши
  */
 
-#ifdef NZC_NZC_MD5_HASH_ENABLED
-
 void DebugPrintMemory(FILE* f, u8* buffer, size_t size)
 {
     fprintf(stderr,
@@ -1050,6 +1223,8 @@ void DebugPrintMemory(FILE* f, u8* buffer, size_t size)
         }
     }
 }
+
+#ifdef NZC_NZC_MD5_HASH_ENABLED
 
 static u32 g_Md5Table_S[64] = {
     7, 12, 17, 22,  7, 12, 17, 22,  7, 12, 17, 22,  7, 12, 17, 22,
@@ -1221,6 +1396,172 @@ bool HashMd5_WriteStringToBuffer(HashMd5* hash, char* outBuffer, size_t outBuffe
 }
 
 #endif // NZC_NZC_MD5_HASH_ENABLED
+
+#ifdef NZC_NZC_SHA1_HASH_ENABLED
+
+void HashSha1_Compute(HashSha1* hash, u8* buffer, size_t size)
+{
+    assert(hash != nil);
+    assert(buffer != nil);
+
+    const size_t messageSize     = size;
+    const size_t messageTailSize = messageSize % SHA1_CHUNK_SIZE;
+    const size_t paddingSize     = (SHA1_CHUNK_SIZE - messageTailSize > SHA1_MESSAGE_LENGTH_SIZE)
+                                 ? (SHA1_CHUNK_SIZE - messageTailSize - SHA1_MESSAGE_LENGTH_SIZE)
+                                 : (2 * SHA1_CHUNK_SIZE - messageTailSize - SHA1_MESSAGE_LENGTH_SIZE);
+    const size_t totalSize       = messageSize + paddingSize + SHA1_MESSAGE_LENGTH_SIZE;
+    const size_t chunkCount      = totalSize / SHA1_CHUNK_SIZE;
+
+    u8 chunk[SHA1_CHUNK_SIZE];
+
+    size_t messageBytesToCopy = messageSize;
+    size_t paddingBytesToCopy = paddingSize;
+    size_t messageBytesCopied = 0;
+    size_t paddingBytesCopied = 0;
+
+    u32 h[SHA1_U32_ARRAY_SIZE];
+    h[0] = SHA1_IV_H0;
+    h[1] = SHA1_IV_H1;
+    h[2] = SHA1_IV_H2;
+    h[3] = SHA1_IV_H3;
+    h[4] = SHA1_IV_H4;
+
+    for (size_t chunkId = 0; chunkId < chunkCount; chunkId++)
+    {
+        const size_t offset = chunkId * SHA1_CHUNK_SIZE;
+
+        // copy message bytes
+        const size_t messageBytesToCopyThisChunk = messageBytesToCopy > SHA1_CHUNK_SIZE
+            ? SHA1_CHUNK_SIZE
+            : messageBytesToCopy;
+
+        if (messageBytesToCopyThisChunk > 0)
+        {
+            memcpy(chunk, buffer + offset, messageBytesToCopyThisChunk);
+            messageBytesCopied += messageBytesToCopyThisChunk;
+            messageBytesToCopy -= messageBytesCopied;
+        }
+
+        // copy padding bytes
+        const size_t chunkSizeRemains = SHA1_CHUNK_SIZE - messageBytesToCopyThisChunk;
+        if (chunkSizeRemains > 0)
+        {
+            const size_t paddingBytesToCopyThisChunk = paddingBytesToCopy > chunkSizeRemains
+                ? chunkSizeRemains
+                : paddingBytesToCopy;
+
+            memset(chunk + messageBytesToCopyThisChunk,
+                   SHA1_PADDING_FILL_BYTE,
+                   paddingBytesToCopyThisChunk);
+
+            if (paddingBytesCopied == 0)
+            {
+                chunk[messageBytesToCopyThisChunk] = SHA1_PADDING_FIRST_BYTE;
+            }
+
+            paddingBytesCopied += paddingBytesToCopyThisChunk;
+            paddingBytesToCopy -= paddingBytesCopied;
+
+            // copy message length bytes
+            if (paddingBytesCopied == paddingSize)
+            {
+                const u64 messageSizeInBits = messageSize * 8;
+                const u64 messageSizeInBitsBigEndian = u64_SwapBytes(messageSizeInBits);
+                memcpy(chunk + messageBytesToCopyThisChunk + paddingBytesToCopyThisChunk,
+                       &messageSizeInBitsBigEndian,
+                       8);
+            }
+        }
+
+#ifdef NZC_NZC_SHA1_HASH_DEBUG_PRINT_CHUNK_MEMORY_ENABLED
+        DebugPrintMemory(stderr, chunk, SHA1_CHUNK_SIZE);
+#endif // NZC_NZC_SHA1_HASH_DEBUG_PRINT_CHUNK_MEMORY_ENABLED
+
+        u32* m = (u32*)chunk;
+        u32 w[80];
+
+        for (u32 i = 0; i < 16; i++)
+        {
+            w[i] = u32_SwapBytes(m[i]);
+        }
+
+        for (u32 i = 16; i < 80; i++)
+        {
+            u32 wi = w[i-3] ^ w[i-8] ^ w[i-14] ^ w[i-16];
+            w[i] = U32_ROTATE_BITS_LEFT(wi, 1);
+        }
+
+        u32 a = h[0];
+        u32 b = h[1];
+        u32 c = h[2];
+        u32 d = h[3];
+        u32 e = h[4];
+        for (u32 i = 0; i < 80; i++)
+        {
+            u32 f, k;
+            if (i < 20)
+            {
+                f = (b & c) | ((~b) & d);
+                k = SHA1_K1;
+            }
+            else if (i < 40)
+            {
+                f = b ^ c ^ d;
+                k = SHA1_K2;
+            }
+            else if (i < 60)
+            {
+                f = (b & c) | (b & d) | (c & d);
+                k = SHA1_K3;
+            }
+            else
+            {
+                f = b ^ c ^ d;
+                k = SHA1_K4;
+            }
+            u32 temp = U32_ROTATE_BITS_LEFT(a, 5) + f + e + k + w[i];
+            e = d;
+            d = c;
+            c = U32_ROTATE_BITS_LEFT(b, 30);
+            b = a;
+            a = temp;
+        }
+        h[0] += a;
+        h[1] += b;
+        h[2] += c;
+        h[3] += d;
+        h[4] += e;
+    }
+
+    for (u32 i = 0; i < SHA1_U32_ARRAY_SIZE; i++)
+    {
+        hash->Numbers[i] = h[i];
+    }
+}
+
+void HashSha1_Write(HashSha1* hash, FILE* f)
+{
+    assert(hash != nil);
+    assert(f != nil);
+    for (u32 i = 0; i < SHA1_U32_ARRAY_SIZE; i++)
+    {
+        fprintf(f, "%08X", hash->Numbers[i]);
+    }
+}
+
+bool HashSha1_WriteStringToBuffer(HashSha1* hash, char* outBuffer, size_t outBufferSize)
+{
+    assert(hash != nil);
+    assert(outBuffer != nil);
+    if (outBufferSize < SHA1_STRING_LENGTH) { return false; }
+    for (u32 i = 0; i < SHA1_U32_ARRAY_SIZE; i++)
+    {
+        sprintf(outBuffer + 2*4*i, "%08X", hash->Numbers[i]);
+    }
+    return true;
+}
+
+#endif // NZC_NZC_SHA1_HASH_ENABLED
 
 /**
  * [SEC30] РЕА Контейнеры

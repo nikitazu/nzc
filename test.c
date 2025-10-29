@@ -1,6 +1,8 @@
 #define NZC_NZC_IMPLEMENTATION
 #define NZC_NZC_MD5_HASH_ENABLED
+#define NZC_NZC_SHA1_HASH_ENABLED
 //#define NZC_NZC_MD5_HASH_DEBUG_PRINT_CHUNK_MEMORY_ENABLED
+//#define NZC_NZC_SHA1_HASH_DEBUG_PRINT_CHUNK_MEMORY_ENABLED
 #define NZC_NZC_DOUBLY_LINKED_LIST_ENABLED
 #define NZC_NZC_BINARY_SEARCH_TREE_LIST_ENABLED
 #include "nzc.h"
@@ -232,6 +234,51 @@ void TEST_ParseFloat32(bool* success)
     PRINT("TEST Parse (f32) - OK");
 }
 
+void TEST_u16_ByteSwap(bool* success)
+{
+    PRINT("TEST u16_ByteSwap");
+    u16 a         = 0x0102;
+    u16 aReversed = 0x0201;
+    u16 b         = u16_SwapBytes(a);
+    if (b != aReversed)
+    {
+        PRINT_Failed("%d", "u16_ByteSwap", aReversed, b);
+        *success = false;
+        return;
+    }
+    PRINT("TEST u16_ByteSwap - OK");
+}
+
+void TEST_u32_ByteSwap(bool* success)
+{
+    PRINT("TEST u32_ByteSwap");
+    u32 a         = 0x01020304;
+    u32 aReversed = 0x04030201;
+    u32 b         = u32_SwapBytes(a);
+    if (b != aReversed)
+    {
+        PRINT_Failed("%d", "u32_ByteSwap", aReversed, b);
+        *success = false;
+        return;
+    }
+    PRINT("TEST u32_ByteSwap - OK");
+}
+
+void TEST_u64_ByteSwap(bool* success)
+{
+    PRINT("TEST u64_ByteSwap");
+    u64 a         = 0x0102030405060708;
+    u64 aReversed = 0x0807060504030201;
+    u64 b         = u64_SwapBytes(a);
+    if (b != aReversed)
+    {
+        PRINT_Failed("%llu", "u64_ByteSwap", aReversed, b);
+        *success = false;
+        return;
+    }
+    PRINT("TEST u64_ByteSwap - OK");
+}
+
 void TEST_HashMd5(bool* success)
 {
     PRINT("TEST Hash (MD5)");
@@ -272,6 +319,56 @@ void TEST_HashMd5(bool* success)
 
 failed:
     PRINT("TEST Hash (MD5) - FAILED");
+    *success = false;
+}
+
+void TEST_HashSha1(bool* success)
+{
+    PRINT("TEST Hash (SHA1)");
+
+    struct { const char* Input; const char* Sha1; } testData[] = {
+        { "",
+          "DA39A3EE5E6B4B0D3255BFEF95601890AFD80709" },
+        { "a",
+          "86F7E437FAA5A7FCE15D1DDCB9EAEAEA377667B8" },
+        { "abc",
+          "A9993E364706816ABA3E25717850C26C9CD0D89D" },
+        { "The quick brown fox jumps over the lazy dog",
+          "2FD4E1C67A2D28FCED849EE1BB76E7391B93EB12" },
+        { "Сообщение с разбитым паддингом",
+          "44D1A92196A6AEAD166910BC21FD219C0ED4143D" },
+        { "Сообщение с хвостом на втором блоке!",
+          "58E537778A8B500865E990932F9CCF1E5F8D15D5" },
+        { "Сообщение тютелька в тютельку=========",
+          "13F9C96FC8CCC0BB11455A528444FCE4E3CDD7B2" },
+    };
+
+    HashSha1 hash;
+    String input;
+    String expected;
+    struct { char Data[SHA1_STRING_LENGTH + 1]; size_t Size; }
+        output = {.Size = SHA1_STRING_LENGTH + 1};
+
+    for (u32 i = 0; i < ARRAY_STATIC_COUNT(testData); i++)
+    {
+        input = String_FromChars(testData[i].Input);
+        expected = String_FromChars(testData[i].Sha1);
+        HashSha1_Compute(&hash, (void*)input.Str, input.Length);
+        HashSha1_WriteStringToBuffer(&hash, output.Data, output.Size);
+        bool sha1correct = String_EqualChars(expected, output.Data);
+        if (!sha1correct)
+        {
+            fprintf(stderr, "Input: '%s'\n", input.Str);
+            PRINT_Failed("%s", "HashSha1_Compute", expected.Str, output.Data);
+            goto failed;
+        }
+    }
+
+    PRINT("TEST Hash (SHA1) - OK");
+    return;
+
+failed:
+    PRINT("TEST Hash (SHA1) - FAILED");
     *success = false;
 }
 
@@ -1334,7 +1431,11 @@ i32 main(i32 argc, const char** args)
 
     TEST_ParseInt32(&success);
     TEST_ParseFloat32(&success);
+    TEST_u16_ByteSwap(&success);
+    TEST_u32_ByteSwap(&success);
+    TEST_u64_ByteSwap(&success);
     TEST_HashMd5(&success);
+    TEST_HashSha1(&success);
     TEST_Arena(&success);
     TEST_ChildArena(&success);
     TEST_String(&success);
