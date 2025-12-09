@@ -264,6 +264,17 @@ void Arena_Free(Arena* arena);
 Arena* Arena_CreateChild(Arena* parent, size_t size);
 
 /**
+ * Создаёт копию арены с новым размером, копируя все данные в новое место.
+ *
+ * @param source  указатель на арену-источник
+ * @param newSize размер новой арены (должен быть больше или равен размеру арены-источника)
+ * @return        новую арену
+ *
+ * Внимание: данные копируются как просто байты, без интерпретации.
+ */
+Arena Arena_CreateCopy(const Arena* source, size_t newSize);
+
+/**
  * [SEC22] ЗАГ Векторы 2D
  */
 
@@ -984,6 +995,16 @@ Arena* Arena_CreateChild(Arena* parent, size_t size)
     child->Offset = 0;
     child->Size = size;
     return child;
+}
+
+Arena Arena_CreateCopy(const Arena* source, size_t newSize)
+{
+    assert(source != nil);
+    assert(newSize >= source->Size);
+    Arena copy = Arena_Create(newSize);
+    memcpy(copy.Buffer, source->Buffer, source->Size);
+    copy.Offset = source->Offset;
+    return copy;
 }
 
 /**

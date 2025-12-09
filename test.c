@@ -494,6 +494,78 @@ cleanup:
     Arena_Free(&arena);
 }
 
+void TEST_Arena_CreateCopy(bool* success)
+{
+    PRINT("TEST Arena_CreateCopy");
+    Arena arena = Arena_Create(KB(10));
+    if (arena.Buffer == nil)
+    {
+        PRINT_Failed("%s", "Arena_Create", "arena.Buffer", "nil");
+        goto failed;
+    }
+
+    if (arena.Size == 0)
+    {
+        PRINT_Failed("%s", "Arena_Create", "arena.Size", "0");
+        goto failed;
+    }
+
+    char* strArray[6] = { "Hello", "this", "is", "a", "varied length", "string storage test" };
+    String stringArray[6] = {0};
+
+    for (size_t i = 0; i < 6; i++)
+    {
+        String s = String_FromChars(strArray[i]);
+        char* strCopy = Arena_Push(&arena, s.Length, char);
+        memcpy(strCopy, s.Str, s.Length);
+        stringArray[i] = String_FromChars(strCopy);
+    }
+
+    Arena arena2 = Arena_CreateCopy(&arena, arena.Size);
+    if (arena2.Buffer == nil)
+    {
+        PRINT_Failed("%s", "Arena_CreateCopy", "arena2.Buffer", "nil");
+        goto failed;
+    }
+
+    if (arena2.Size == 0)
+    {
+        PRINT_Failed("%s", "Arena_CreateCopy", "arena2.Size", "0");
+        goto failed;
+    }
+
+    intptr_t arenaDistance = (intptr_t)arena2.Buffer - (intptr_t)arena.Buffer;
+
+    for (size_t i = 0; i < 6; i++)
+    {
+        String one = stringArray[i];
+        String two;
+        two.Length = one.Length;
+        two.Str = (void*)((intptr_t)one.Str + arenaDistance);
+        for (size_t j = 0; j < one.Length; j++)
+        {
+            char c1 = one.Str[j];
+            char c2 = two.Str[j];
+            if (c1 != c2)
+            {
+                PRINT_Failed("%d", "Compare copied values", c1, c2);
+                goto failed;
+            }
+        }
+    }
+
+    PRINT("TEST Arena_CreateCopy - OK");
+    goto cleanup;
+
+failed:
+    *success = false;
+    PRINT("TEST Arena_CreateCopy - FAILED");
+
+cleanup:
+    Arena_Free(&arena2);
+    Arena_Free(&arena);
+}
+
 
 void TEST_ChildArena(bool* success)
 {
@@ -1437,6 +1509,7 @@ i32 main(i32 argc, const char** args)
     TEST_HashMd5(&success);
     TEST_HashSha1(&success);
     TEST_Arena(&success);
+    TEST_Arena_CreateCopy(&success);
     TEST_ChildArena(&success);
     TEST_String(&success);
 
