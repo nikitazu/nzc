@@ -120,7 +120,9 @@ typedef double f64;
 
 #define UNUSED(x) (void)(x)
 #define NAMEOF(x) (#x)
-#define KB(x) ((x) * 1024)
+#define KB(x) (((size_t)x) * (size_t)1024)
+#define MB(x) ((size_t)KB(x) * (size_t)1024)
+#define GB(x) ((size_t)MB(x) * (size_t)1024)
 
 #define ARRAY_STATIC_COUNT(ARR) \
     (sizeof(ARR) / sizeof(ARR[0]))
