@@ -1858,8 +1858,6 @@ void SipHash128_Compute(SipHash128* hash,
     v2 ^= k0;
     v1 ^= k1;
     v0 ^= k0;
-
-    //if (outBufferSize == 16) { v1 ^= 0xEE; }
     v1 ^= 0xEE;
 
     for (; ni != end; ni += 8)
@@ -1867,7 +1865,6 @@ void SipHash128_Compute(SipHash128* hash,
         m = U8_ARRAY_TO_U64_LE(ni);
         v3 ^= m;
 
-        // TODO debug print
         for (i32 i = 0; i < SIPHASH_C_ROUNDS; i++)
         {
             SIPHASH_ROUND;
@@ -1889,17 +1886,14 @@ void SipHash128_Compute(SipHash128* hash,
 
     v3 ^= b;
 
-    // TODO debug print
     for (i32 i = 0; i < SIPHASH_C_ROUNDS; i++)
     {
         SIPHASH_ROUND;
     }
 
     v0 ^= b;
-    //v2 ^= (outBufferSize == 16 ? 0xEE : 0xFF);
     v2 ^= 0xEE;
 
-    // TODO debug print
     for (i32 i = 0; i < SIPHASH_D_ROUNDS; i++)
     {
         SIPHASH_ROUND;
@@ -1908,14 +1902,8 @@ void SipHash128_Compute(SipHash128* hash,
     b = v0 ^ v1 ^ v2 ^ v3;
     U64_TO_U8_ARRAY_LE(hash->Digest.Bytes, b);
 
-    /*if (outBufferSize == 8)
-    {
-        return;
-        }*/
-
     v1 ^= 0xDD;
 
-    // TODO debug print
     for (i32 i = 0; i < SIPHASH_D_ROUNDS; i++)
     {
         SIPHASH_ROUND;
