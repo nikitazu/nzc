@@ -22,4 +22,11 @@ pushd .\bin
      -DUNICODE -D_UNICODE -DWIN32 -D_WINDOWS ^
      ..\test.c ^
      -o test.exe
+
+  call clang -std=c17 -Wall --debug ^
+     -fdiagnostics-absolute-paths ^
+     -fmacro-prefix-map=..\= ^
+     -DUNICODE -D_UNICODE -DWIN32 -D_WINDOWS ^
+     ..\word-count.c ^
+     -o word-count.exe
 popd

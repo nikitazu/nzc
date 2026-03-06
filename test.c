@@ -5,6 +5,7 @@
 //#define NZC_NZC_SHA1_HASH_DEBUG_PRINT_CHUNK_MEMORY_ENABLED
 #define NZC_NZC_DOUBLY_LINKED_LIST_ENABLED
 #define NZC_NZC_BINARY_SEARCH_TREE_LIST_ENABLED
+#define NZC_NZC_HASHTABLE_ENABLED
 #include "nzc.h"
 #define NZC_NZARG_IMPLEMENTATION
 #include "nzarg.h"
@@ -369,6 +370,96 @@ void TEST_HashSha1(bool* success)
 
 failed:
     PRINT("TEST Hash (SHA1) - FAILED");
+    *success = false;
+}
+
+void TEST_SipHash64(bool* success)
+{
+    PRINT("TEST SipHash64");
+
+    struct { const char* Input; const char* Expected; } testData[] = {
+        { "",                                            "F72C7164CF7C901C" },
+        { "a",                                           "BED468A1587ECAF3" },
+        { "abc",                                         "C709AC1BA160C436" },
+        { "The quick brown fox jumps over the lazy dog", "F0A5307ACA085DFC" },
+        { "Сообщение с за пределами ASCII!",             "954E4A42CE4746C1" },
+    };
+
+    String key = String_FromChars("My 16-byte Key==");
+    SipHash64 hash = { .Key = (void*)key.Str };
+
+    String input;
+    String expected;
+    struct { char Data[SIPHASH_64_STRING_LENGTH + 1]; size_t Size; }
+        output = {.Size = SIPHASH_64_STRING_LENGTH + 1};
+
+    for (u32 i = 0; i < ARRAY_STATIC_COUNT(testData); i++)
+    {
+        input = String_FromChars(testData[i].Input);
+        expected = String_FromChars(testData[i].Expected);
+
+        SipHash64_Compute(&hash, input.Str, input.Length);
+        SipHash64_WriteStringToBuffer(&hash, output.Data, output.Size);
+
+        bool isCorrect = String_EqualChars(expected, output.Data);
+        if (!isCorrect)
+        {
+            fprintf(stderr, "Input: '%s'\n", input.Str);
+            PRINT_Failed("%s", "SipHash64_Compute", expected.Str, output.Data);
+            goto failed;
+        }
+    }
+
+    PRINT("TEST SipHash64 - OK");
+    return;
+
+failed:
+    PRINT("TEST SipHash64 - FAILED");
+    *success = false;
+}
+
+void TEST_SipHash128(bool* success)
+{
+    PRINT("TEST SipHash128");
+
+    struct { const char* Input; const char* Expected; } testData[] = {
+        { "",                                            "0ED04BF0BA20FDC1C63BCBA2749695C4" },
+        { "a",                                           "7835B5E2F7F5B34FF334B7C828FF136A" },
+        { "abc",                                         "79DFE0D9B405771B9C96BEA3D0091B0B" },
+        { "The quick brown fox jumps over the lazy dog", "7BE02205F88FD48C655066649CEF3A59" },
+        { "Сообщение с за пределами ASCII!",             "D1EFE1BB2C4D09C8DA47BED356BFDA76" },
+    };
+
+    String key = String_FromChars("My 16-byte Key==");
+    SipHash128 hash = { .Key = (void*)key.Str };
+
+    String input;
+    String expected;
+    struct { char Data[SIPHASH_128_STRING_LENGTH + 1]; size_t Size; }
+        output = {.Size = SIPHASH_128_STRING_LENGTH + 1};
+
+    for (u32 i = 0; i < ARRAY_STATIC_COUNT(testData); i++)
+    {
+        input = String_FromChars(testData[i].Input);
+        expected = String_FromChars(testData[i].Expected);
+
+        SipHash128_Compute(&hash, input.Str, input.Length);
+        SipHash128_WriteStringToBuffer(&hash, output.Data, output.Size);
+
+        bool isCorrect = String_EqualChars(expected, output.Data);
+        if (!isCorrect)
+        {
+            fprintf(stderr, "Input: '%s'\n", input.Str);
+            PRINT_Failed("%s", "SipHash128_Compute", expected.Str, output.Data);
+            goto failed;
+        }
+    }
+
+    PRINT("TEST SipHash128 - OK");
+    return;
+
+failed:
+    PRINT("TEST SipHash128 - FAILED");
     *success = false;
 }
 
@@ -1210,6 +1301,160 @@ cleanup:
     { /* nothing to cleanup */ }
 }
 
+typedef struct Int32HashEntry
+{
+    HashEntry Entry;
+    i32       Value;
+} Int32HashEntry;
+
+void TEST_HashTableOnStack(bool* success)
+{
+    PRINT("TEST HashTable (on stack)");
+    HashTableResult r;
+    Int32HashEntry items[NZC_HASHTABLE_INITIAL_CAPACITY] = {0};
+    HashTable ht = {0};
+    HashTable_Init(&ht,
+                   NZC_HASHTABLE_INITIAL_CAPACITY,
+                   sizeof(Int32HashEntry), &items);
+
+    r = HashTable_Find(&ht, String_FromChars("hi"));
+    if (r.Type != HashTableResultType_Empty)
+    {
+        PRINT_Failed("%d", "HashTable_Find (hi)",
+                     HashTableResultType_Empty, r.Type);
+        goto failed;
+    }
+
+    {
+        Int32HashEntry* rEntry = r.Entry;
+        rEntry->Entry.Key = String_FromChars("hi");
+        rEntry->Value = 1;
+    }
+
+    r = HashTable_Find(&ht, String_FromChars("hi"));
+    if (r.Type != HashTableResultType_Match)
+    {
+        PRINT_Failed("%d", "HashTable_Find (hi) (after set)",
+                     HashTableResultType_Match, r.Type);
+        goto failed;
+    }
+
+    const char* keys[15] = {
+        "foo", "bar", "yo", "zaza",
+        "a",   "b",   "c",  "d",
+        "ya",  "yi",  "yu", "yoh",
+        "za",  "wa",  "ru",
+    };
+
+    const i32   vals[15] = {
+        10,   20,   30,   40,
+        11,   22,   33,   44,
+        1111, 1111, 1111, 1111,
+        2222, 2222, 2222
+    };
+
+    for (size_t i = 0; i < 15; i++)
+    {
+        String key = String_FromChars(keys[i]);
+        r = HashTable_Find(&ht, key);
+        if (r.Type != HashTableResultType_Empty)
+        {
+            PRINT_Failed("%d", "HashTable_Find (15 keys)",
+                         HashTableResultType_Empty, r.Type);
+            goto failed;
+        }
+        Int32HashEntry* rEntry = r.Entry;
+        rEntry->Entry.Key = key;
+        rEntry->Value = vals[i];
+    }
+
+    size_t count = HashTable_Count(&ht);
+    if (count != 16)
+    {
+        PRINT_Failed("%zu", "HashTable_Count", (size_t)9, count);
+        goto failed;
+    }
+
+    for (HashTableIterator it = HashTable_Iterate(&ht);
+         !it.Eof;
+         HashTable_Next(&it))
+    {
+        Int32HashEntry* entry = it.Entry;
+        String key = entry->Entry.Key;
+        i32    val = entry->Value;
+        for (size_t i = 0; i < 15; i++)
+        {
+            String currentKey = String_FromChars(keys[i]);
+            if (String_Equal(key, currentKey))
+            {
+                if (val != vals[i])
+                {
+                    PRINT_Failed("%d", "HashTable_Iterate", vals[i], val);
+                    goto failed;
+                }
+            }
+        }
+    }
+
+    // COPY TEST
+    Int32HashEntry items2[NZC_HASHTABLE_INITIAL_CAPACITY * 2] = {0};
+    HashTable ht2 = {0};
+    HashTable_Init(&ht2,
+                   NZC_HASHTABLE_INITIAL_CAPACITY * 2,
+                   sizeof(Int32HashEntry),
+                   &items2);
+
+    HashTable_Copy(&ht, &ht2);
+
+    size_t count2 = HashTable_Count(&ht2);
+    if (count2 != count)
+    {
+        PRINT_Failed("count %zu", "HashTable_Copy", count, count2);
+        goto failed;
+    }
+
+    // Перепроверка что все ключи пересчитались и находятся
+    for (size_t i = 0; i < 15; i++)
+    {
+        String key = String_FromChars(keys[i]);
+        r = HashTable_Find(&ht2, key);
+        if (r.Type != HashTableResultType_Match)
+        {
+            PRINT_Failed("%d", "HashTable_Find (copied 15 keys)",
+                         HashTableResultType_Match, r.Type);
+            goto failed;
+        }
+    }
+
+    for (HashTableIterator it = HashTable_Iterate(&ht2);
+         !it.Eof;
+         HashTable_Next(&it))
+    {
+        Int32HashEntry* entry = it.Entry;
+        String key = entry->Entry.Key;
+        i32 val = entry->Value;
+        for (size_t i = 0; i < 15; i++)
+        {
+            String currentKey = String_FromChars(keys[i]);
+            if (String_Equal(key, currentKey))
+            {
+                if (val != vals[i])
+                {
+                    PRINT_Failed("%d", "HashTable_Iterate (on copy)", vals[i], val);
+                    goto failed;
+                }
+            }
+        }
+    }
+
+    PRINT("TEST HashTable (on stack) - OK");
+    return;
+
+failed:
+    PRINT("TEST HashTable (on stack) - FAILED");
+    *success = false;
+}
+
 
 typedef struct NZArgTestSettings
 {
@@ -1508,6 +1753,8 @@ i32 main(i32 argc, const char** args)
     TEST_u64_ByteSwap(&success);
     TEST_HashMd5(&success);
     TEST_HashSha1(&success);
+    TEST_SipHash64(&success);
+    TEST_SipHash128(&success);
     TEST_Arena(&success);
     TEST_Arena_CreateCopy(&success);
     TEST_ChildArena(&success);
@@ -1517,6 +1764,7 @@ i32 main(i32 argc, const char** args)
     TEST_DoublyLinkedListOnStack(&success);
 
     TEST_BinarySearchTreeOnStack(&success);
+    TEST_HashTableOnStack(&success);
 
     TEST_NZArgDefaults(&success);
     TEST_NZArgShortNames(&success);

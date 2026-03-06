@@ -27,13 +27,21 @@
  * [SEC23] ОГЛ Строки
  * [SEC24] ОГЛ Парсинг чисел
  * [SEC25] ОГЛ Хеши
+ * [SEC251] ОГЛ MD5
+ * [SEC252] ОГЛ SHA1
+ * [SEC253] ОГЛ SIPHASH
+ * [SEC254] ОГЛ FNV1A
+ * [SEC26] ДЕЛА GUID
  *
  * [SEC30] ОГЛ Контейнеры
  * ----------------------
  * [SEC31] ОГЛ Двое-связанный список
  * [SEC32] ОГЛ Бинарное древо
+ * [SEC33] ОГЛ Хеш-Таблица
  *
  * [SEC40] ОГЛ Логирование (ДЕЛА думаю логи следует вытащить в отдельный файл)
+ * [SEC41] ДЕЛА Base32
+ * [SEC42] ДЕЛА Base64
  */
 
 /**
@@ -41,11 +49,14 @@
  * ======================
  *
  * // Подключите заголовочный файл
- * #define NZC_NZC_IMPLEMENTATION                            // определить флаг в файле реализации
- * #define NZC_NZC_MD5_HASH_ENABLED                          // включить алгоритм хеширования MD5
- * #define NZC_NZC_MD5_HASH_DEBUG_PRINT_CHUNK_MEMORY_ENABLED // включить отладочную печать MD5
- * #define NZC_NZC_DOUBLY_LINKED_LIST_ENABLED                // включить двое-связанный список
- * #define NZC_NZC_BINARY_SEARCH_TREE_LIST_ENABLED           // включить бинарное поисковое древо
+ * #define NZC_NZC_IMPLEMENTATION                             // определить флаг в файле реализации
+ * #define NZC_NZC_MD5_HASH_ENABLED                           // включить алгоритм хеширования MD5
+ * #define NZC_NZC_MD5_HASH_DEBUG_PRINT_CHUNK_MEMORY_ENABLED  // включить отладочную печать MD5
+ * #define NZC_NZC_SHA1_HASH_ENABLED                          // включить алгоритм хеширования SHA1
+ * #define NZC_NZC_SHA1_HASH_DEBUG_PRINT_CHUNK_MEMORY_ENABLED // включить отладочную печать SHA1
+ * #define NZC_NZC_DOUBLY_LINKED_LIST_ENABLED                 // включить двое-связанный список
+ * #define NZC_NZC_BINARY_SEARCH_TREE_LIST_ENABLED            // включить бинарное поисковое древо
+ * #define NZC_NZC_HASHTABLE_ENABLED                          // включить хештаблицу
  * #include "nzc.h"
  */
 
@@ -127,8 +138,27 @@ typedef double f64;
 #define ARRAY_STATIC_COUNT(ARR) \
     (sizeof(ARR) / sizeof(ARR[0]))
 
-#define U32_ROTATE_BITS_LEFT(NUM, SIZE) \
+#define U32_ROTATE_BITS_LEFT(NUM, SIZE)             \
     (((NUM) << (SIZE)) | ((NUM) >> (32 - (SIZE))))
+
+#define U64_ROTATE_BITS_LEFT(NUM, SIZE)                     \
+    ((u64)(((NUM) << (SIZE)) | ((NUM) >> (64 - (SIZE)))))
+
+#define U32_TO_U8_ARRAY_LE(ARR, VAL)   \
+    (ARR)[0] = (u8)((VAL)      );      \
+    (ARR)[1] = (u8)((VAL) >>  8);      \
+    (ARR)[2] = (u8)((VAL) >> 16);      \
+    (ARR)[3] = (u8)((VAL) >> 24);
+
+#define U64_TO_U8_ARRAY_LE(ARR, VAL)                    \
+    U32_TO_U8_ARRAY_LE((ARR),     (u32)((VAL)      ));  \
+    U32_TO_U8_ARRAY_LE((ARR) + 4, (u32)((VAL) >> 32));
+
+#define U8_ARRAY_TO_U64_LE(ARR)                                   \
+    (((u64)((ARR)[0]))       | ((u64)((ARR)[1]) <<  8) |          \
+     ((u64)((ARR)[2]) << 16) | ((u64)((ARR)[3]) << 24) |          \
+     ((u64)((ARR)[4]) << 32) | ((u64)((ARR)[5]) << 40) |          \
+     ((u64)((ARR)[6]) << 48) | ((u64)((ARR)[7]) << 56))
 
 /**
  * Хитрый макрос линуксоидов
@@ -191,9 +221,16 @@ typedef union FixedArrayU64
     u8  Bytes[8];
 } FixedArrayU64;
 
+typedef union FixedArrayU128
+{
+    struct { u64 Hi; u64 Lo; } Value;
+    u8                         Bytes[16];
+} FixedArrayU128;
+
 u16 u16_SwapBytes(u16 v);
 u32 u32_SwapBytes(u32 v);
 u64 u64_SwapBytes(u64 v);
+void DebugPrintMemory(FILE* f, u8* buffer, size_t size);
 
 /**
  * [SEC20] ЗАГ Типы данных
@@ -519,6 +556,7 @@ f32 f32_Parse(const char* buffer, size_t offset, size_t count);
 
 /**
  * [SEC25] ЗАГ Хеши
+ * [SEC251] ЗАГ MD5
  */
 
 #ifdef NZC_NZC_MD5_HASH_ENABLED
@@ -621,6 +659,10 @@ void HashMd5_Write(HashMd5* hash, FILE* f);
 bool HashMd5_WriteStringToBuffer(HashMd5* hash, char* outBuffer, size_t outBufferSize);
 
 #endif // NZC_NZC_MD5_HASH_ENABLED
+
+/**
+ * [SEC252] ЗАГ SHA1
+ */
 
 #ifdef NZC_NZC_SHA1_HASH_ENABLED
 
@@ -726,6 +768,67 @@ bool HashSha1_WriteStringToBuffer(HashSha1* hash, char* outBuffer, size_t outBuf
 #endif // NZC_NZC_SHA1_HASH_ENABLED
 
 /**
+ * [SEC253] ЗАГ SIPHASH
+ */
+
+#define SIPHASH_64_SIZE            8
+#define SIPHASH_128_SIZE          16
+#define SIPHASH_64_STRING_LENGTH  16
+#define SIPHASH_128_STRING_LENGTH 32
+#define SIPHASH_C_ROUNDS           2
+#define SIPHASH_D_ROUNDS           4
+
+typedef struct SipHash64
+{
+    void*         Key;
+    FixedArrayU64 Digest;
+} SipHash64;
+
+typedef struct SipHash128
+{
+    void*          Key;
+    FixedArrayU128 Digest;
+} SipHash128;
+
+void SipHash64_Compute(SipHash64* hash,
+                       const void* buffer,
+                       const size_t bufferSize);
+
+void SipHash128_Compute(SipHash128* hash,
+                        const void* buffer,
+                        const size_t bufferSize);
+
+void SipHash64_Write(SipHash64* hash, FILE* f);
+
+bool SipHash64_WriteStringToBuffer(SipHash64* hash,
+                                   char* outBuffer,
+                                   size_t outBufferSize);
+
+void SipHash128_Write(SipHash128* hash, FILE* f);
+
+bool SipHash128_WriteStringToBuffer(SipHash128* hash,
+                                    char* outBuffer,
+                                    size_t outBufferSize);
+
+/**
+ * [SEC254] ЗАГ FNV1A
+ */
+
+#define NZC_FNV1A64_OFFSET 14695981039346656037UL
+#define NZC_FNV1A64_PRIME         1099511628211UL
+
+/**
+ * Рассчитать хеш FNV-1a.
+ *
+ * @param buffer буфер для чтения исходных данных
+ * @param size   количество байт в `buffer'
+ *
+ * Возвращает 64-битный хеш для входного буфера данных
+ * в виде целого беззнагового числа.
+ */
+u64 FNV1A64_Compute(const void* buffer, size_t bufferSize);
+
+/**
  * [SEC30] ЗАГ Контейнеры
  * ----------------------
  * [SEC31] ЗАГ Двое-связанный список
@@ -810,6 +913,64 @@ void BST_WalkInOrder(BST* t, void* accum, BST_WalkProc proc);
 // ДЕЛА реализовать нерекурсивный итератор, с использованием стека
 
 #endif // NZC_NZC_BINARY_SEARCH_TREE_LIST_ENABLED
+
+/**
+ * [SEC33] ЗАГ Хеш-Таблица
+ */
+
+#ifdef NZC_NZC_HASHTABLE_ENABLED
+
+// TODO define settings
+//      hash function
+//      initial size
+//      grow factor
+
+#define NZC_HASHTABLE_INITIAL_CAPACITY 16
+#define NZC_HASHTABLE_GROTH_FACTOR 0.75f
+
+typedef struct HashEntry
+{
+    String Key;
+} HashEntry;
+
+typedef struct HashTable
+{
+    size_t Capacity;
+    size_t ItemSize;
+    void*  Items;
+} HashTable;
+
+typedef enum HashTableResultType
+{
+    HashTableResultType_Match = 0,        // нашли ячейку с данными
+    HashTableResultType_Empty,            // нашли пустую ячейку
+    HashTableResultType_CapacityReached,  // нет места
+} HashTableResultType;
+
+typedef struct HashTableResult
+{
+    HashTableResultType Type;
+    void*               Entry;
+} HashTableResult;
+
+typedef struct HashTableIterator
+{
+    HashTable* Table;
+    void*      Entry;
+    bool       Eof;
+    size_t     Index;
+} HashTableIterator;
+
+void HashTable_Init(HashTable* ht, size_t capacity, size_t itemSize, void* items);
+size_t HashTable_Count(HashTable* ht);
+HashTableResult HashTable_Find(HashTable* ht, String key);
+HashTableResult HashTable_FindWithHash(HashTable* ht, String key, u64 hash);
+HashTableIterator HashTable_Iterate(HashTable* ht);
+void HashTable_Next(HashTableIterator* it);
+void HashTable_Copy(HashTable* source, HashTable* target);
+
+#endif // NZC_NZC_HASHTABLE_ENABLED
+
 
 /**
  * [SEC40] ЗАГ Логирование
@@ -914,6 +1075,34 @@ u64 u64_SwapBytes(u64 v)
     b.Bytes[6] = a.Bytes[1];
     b.Bytes[7] = a.Bytes[0];
     return b.Value;
+}
+
+void DebugPrintMemory(FILE* f, u8* buffer, size_t size)
+{
+    fprintf(stderr,
+            "Debug: memory dump\n"
+            "       ");
+
+    for (size_t i = 0; i < size; i++)
+    {
+        fprintf(stderr, "%02X", buffer[i]);
+        if (i == size - 1)
+        {
+            fprintf(stderr, "\n");
+        }
+        else if (i % 16 == 15)
+        {
+            fprintf(stderr, "\n       ");
+        }
+        else if (i % 4 == 3)
+        {
+            fprintf(stderr, "  ");
+        }
+        else
+        {
+            fprintf(stderr, " ");
+        }
+    }
 }
 
 /**
@@ -1217,35 +1406,8 @@ f32 f32_Parse(const char* buffer, size_t offset, size_t count)
 
 /**
  * [SEC25] РЕА Хеши
+ * [SEC251] РЕА MD5
  */
-
-void DebugPrintMemory(FILE* f, u8* buffer, size_t size)
-{
-    fprintf(stderr,
-            "Debug: memory dump\n"
-            "       ");
-
-    for (size_t i = 0; i < size; i++)
-    {
-        fprintf(stderr, "%02X", buffer[i]);
-        if (i == size - 1)
-        {
-            fprintf(stderr, "\n");
-        }
-        else if (i % 16 == 15)
-        {
-            fprintf(stderr, "\n       ");
-        }
-        else if (i % 4 == 3)
-        {
-            fprintf(stderr, "  ");
-        }
-        else
-        {
-            fprintf(stderr, " ");
-        }
-    }
-}
 
 #ifdef NZC_NZC_MD5_HASH_ENABLED
 
@@ -1420,6 +1582,10 @@ bool HashMd5_WriteStringToBuffer(HashMd5* hash, char* outBuffer, size_t outBuffe
 
 #endif // NZC_NZC_MD5_HASH_ENABLED
 
+/**
+ * [SEC252] РЕА SHA1
+ */
+
 #ifdef NZC_NZC_SHA1_HASH_ENABLED
 
 void HashSha1_Compute(HashSha1* hash, u8* buffer, size_t size)
@@ -1587,6 +1753,249 @@ bool HashSha1_WriteStringToBuffer(HashSha1* hash, char* outBuffer, size_t outBuf
 #endif // NZC_NZC_SHA1_HASH_ENABLED
 
 /**
+ * [SEC253] РЕА SIPHASH
+ */
+
+#define SIPHASH_ROUND                         \
+    do {                                      \
+        v0 += v1;                             \
+        v1 = U64_ROTATE_BITS_LEFT(v1, 13);    \
+        v1 ^= v0;                             \
+        v0 = U64_ROTATE_BITS_LEFT(v0, 32);    \
+        v2 += v3;                             \
+        v3 = U64_ROTATE_BITS_LEFT(v3, 16);    \
+        v3 ^= v2;                             \
+        v0 += v3;                             \
+        v3 = U64_ROTATE_BITS_LEFT(v3, 21);    \
+        v3 ^= v0;                             \
+        v2 += v1;                             \
+        v1 = U64_ROTATE_BITS_LEFT(v1, 17);    \
+        v1 ^= v2;                             \
+        v2 = U64_ROTATE_BITS_LEFT(v2, 32);    \
+    } while (0)
+
+void SipHash64_Compute(SipHash64* hash,
+                       const void* buffer,
+                       const size_t bufferSize)
+{
+    const u8* ni = buffer;
+    const u8* kk = hash->Key;
+    u64 v0 = UINT64_C(0x736f6d6570736575);
+    u64 v1 = UINT64_C(0x646f72616e646f6d);
+    u64 v2 = UINT64_C(0x6c7967656e657261);
+    u64 v3 = UINT64_C(0x7465646279746573);
+    u64 k0 = U8_ARRAY_TO_U64_LE(kk);
+    u64 k1 = U8_ARRAY_TO_U64_LE(kk + 8);
+    u64 m;
+    const u8* end = ni + bufferSize - (bufferSize % sizeof(u64));
+    const i32 left = bufferSize & 7;
+    u64 b = ((u64)bufferSize) << 56;
+    v3 ^= k1;
+    v2 ^= k0;
+    v1 ^= k1;
+    v0 ^= k0;
+
+    for (; ni != end; ni += 8)
+    {
+        m = U8_ARRAY_TO_U64_LE(ni);
+        v3 ^= m;
+
+        for (i32 i = 0; i < SIPHASH_C_ROUNDS; i++)
+        {
+            SIPHASH_ROUND;
+        }
+
+        v0 ^= m;
+    }
+
+    switch (left)
+    {
+    case 7: b |= ((u64)ni[6]) << 48;
+    case 6: b |= ((u64)ni[5]) << 40;
+    case 5: b |= ((u64)ni[4]) << 32;
+    case 4: b |= ((u64)ni[3]) << 24;
+    case 3: b |= ((u64)ni[2]) << 16;
+    case 2: b |= ((u64)ni[1]) <<  8;
+    case 1: b |= ((u64)ni[0]);
+    }
+
+    v3 ^= b;
+
+    for (i32 i = 0; i < SIPHASH_C_ROUNDS; i++)
+    {
+        SIPHASH_ROUND;
+    }
+
+    v0 ^= b;
+    v2 ^= 0xFF;
+
+    for (i32 i = 0; i < SIPHASH_D_ROUNDS; i++)
+    {
+        SIPHASH_ROUND;
+    }
+
+    b = v0 ^ v1 ^ v2 ^ v3;
+    U64_TO_U8_ARRAY_LE(hash->Digest.Bytes, b);
+}
+
+void SipHash128_Compute(SipHash128* hash,
+                        const void* buffer,
+                        const size_t bufferSize)
+{
+    const u8* ni = buffer;
+    const u8* kk = hash->Key;
+    u64 v0 = UINT64_C(0x736f6d6570736575);
+    u64 v1 = UINT64_C(0x646f72616e646f6d);
+    u64 v2 = UINT64_C(0x6c7967656e657261);
+    u64 v3 = UINT64_C(0x7465646279746573);
+    u64 k0 = U8_ARRAY_TO_U64_LE(kk);
+    u64 k1 = U8_ARRAY_TO_U64_LE(kk + 8);
+    u64 m;
+    const u8* end = ni + bufferSize - (bufferSize % sizeof(u64));
+    const i32 left = bufferSize & 7;
+    u64 b = ((u64)bufferSize) << 56;
+    v3 ^= k1;
+    v2 ^= k0;
+    v1 ^= k1;
+    v0 ^= k0;
+
+    //if (outBufferSize == 16) { v1 ^= 0xEE; }
+    v1 ^= 0xEE;
+
+    for (; ni != end; ni += 8)
+    {
+        m = U8_ARRAY_TO_U64_LE(ni);
+        v3 ^= m;
+
+        // TODO debug print
+        for (i32 i = 0; i < SIPHASH_C_ROUNDS; i++)
+        {
+            SIPHASH_ROUND;
+        }
+
+        v0 ^= m;
+    }
+
+    switch (left)
+    {
+    case 7: b |= ((u64)ni[6]) << 48;
+    case 6: b |= ((u64)ni[5]) << 40;
+    case 5: b |= ((u64)ni[4]) << 32;
+    case 4: b |= ((u64)ni[3]) << 24;
+    case 3: b |= ((u64)ni[2]) << 16;
+    case 2: b |= ((u64)ni[1]) <<  8;
+    case 1: b |= ((u64)ni[0]);
+    }
+
+    v3 ^= b;
+
+    // TODO debug print
+    for (i32 i = 0; i < SIPHASH_C_ROUNDS; i++)
+    {
+        SIPHASH_ROUND;
+    }
+
+    v0 ^= b;
+    //v2 ^= (outBufferSize == 16 ? 0xEE : 0xFF);
+    v2 ^= 0xEE;
+
+    // TODO debug print
+    for (i32 i = 0; i < SIPHASH_D_ROUNDS; i++)
+    {
+        SIPHASH_ROUND;
+    }
+
+    b = v0 ^ v1 ^ v2 ^ v3;
+    U64_TO_U8_ARRAY_LE(hash->Digest.Bytes, b);
+
+    /*if (outBufferSize == 8)
+    {
+        return;
+        }*/
+
+    v1 ^= 0xDD;
+
+    // TODO debug print
+    for (i32 i = 0; i < SIPHASH_D_ROUNDS; i++)
+    {
+        SIPHASH_ROUND;
+    }
+
+    b = v0 ^ v1 ^ v2 ^ v3;
+    U64_TO_U8_ARRAY_LE(hash->Digest.Bytes + 8, b);
+}
+
+#undef SIPHASH_ROUND
+
+void SipHash64_Write(SipHash64* hash, FILE* f)
+{
+    assert(hash != nil);
+    assert(f != nil);
+    for (u32 i = 0; i < SIPHASH_64_SIZE; i++)
+    {
+        const u8 byte = hash->Digest.Bytes[SIPHASH_64_SIZE - 1 - i];
+        fprintf(f, "%02X", byte);
+    }
+}
+
+bool SipHash64_WriteStringToBuffer(SipHash64* hash,
+                                   char* outBuffer,
+                                   size_t outBufferSize)
+{
+    assert(hash != nil);
+    assert(outBuffer != nil);
+    if (outBufferSize < SIPHASH_64_SIZE * 2) { return false; }
+    for (u32 i = 0; i < SIPHASH_64_SIZE; i++)
+    {
+        const u8 byte = hash->Digest.Bytes[SIPHASH_64_SIZE - 1 - i];
+        sprintf(outBuffer + 2*i, "%02X", byte);
+    }
+    return true;
+}
+
+void SipHash128_Write(SipHash128* hash, FILE* f)
+{
+    assert(hash != nil);
+    assert(f != nil);
+    for (u32 i = 0; i < SIPHASH_128_SIZE; i++)
+    {
+        const u8 byte = hash->Digest.Bytes[SIPHASH_128_SIZE - 1 - i];
+        fprintf(f, "%02X", byte);
+    }
+}
+
+bool SipHash128_WriteStringToBuffer(SipHash128* hash,
+                                    char* outBuffer,
+                                    size_t outBufferSize)
+{
+    assert(hash != nil);
+    assert(outBuffer != nil);
+    if (outBufferSize < SIPHASH_128_SIZE * 2) { return false; }
+    for (u32 i = 0; i < SIPHASH_128_SIZE; i++)
+    {
+        const u8 byte = hash->Digest.Bytes[SIPHASH_128_SIZE - 1 - i];
+        sprintf(outBuffer + 2*i, "%02X", byte);
+    }
+    return true;
+}
+
+/**
+ * [SEC254] РЕА FNV1A
+ */
+
+u64 FNV1A64_Compute(const void* buffer, size_t bufferSize)
+{
+    u64 hash = NZC_FNV1A64_OFFSET;
+    const u8* data = buffer;
+    for (size_t i = 0; i < bufferSize; i++)
+    {
+        hash ^= (u64)data[i];
+        hash *= NZC_FNV1A64_PRIME;
+    }
+    return hash;
+}
+
+/**
  * [SEC30] РЕА Контейнеры
  * ----------------------
  * [SEC31] РЕА Двое-связанный список
@@ -1751,5 +2160,142 @@ void BST_WalkInOrder(BST* t, void* accum, BST_WalkProc proc)
 }
 
 #endif // NZC_NZC_BINARY_SEARCH_TREE_LIST_ENABLED
+
+/**
+ * [SEC33] РЕА Хеш-Таблица
+ */
+
+#ifdef NZC_NZC_HASHTABLE_ENABLED
+
+void HashTable_Init(HashTable* ht, size_t capacity, size_t itemSize, void* items)
+{
+    ht->Capacity = capacity;
+    ht->ItemSize = itemSize;
+    ht->Items    = items;
+}
+
+HashTableResult HashTable_Find(HashTable* ht, String key)
+{
+    const u64 hash = FNV1A64_Compute(key.Str, key.Length);
+    return HashTable_FindWithHash(ht, key, hash);
+}
+
+HashTableResult HashTable_FindWithHash(HashTable* ht, String key, u64 hash)
+{
+    HashTableResult result = {0};
+    // ДЕЛА в статье почемуто & вместо модуля, проверить
+    //      https://benhoyt.com/writings/hash-table-in-c/
+    size_t     capacity = ht->Capacity;
+    size_t     index    = hash % (capacity - 1);
+    size_t     count    = 0;
+    size_t     itemSize = ht->ItemSize;
+    u8*        items    = ht->Items;
+    HashEntry* item;
+    while (true)
+    {
+        item = (HashEntry*)(items + index * itemSize);
+        String itemKey = item->Key;
+        if (itemKey.Str == nil)
+        {
+            break;
+        }
+        count++;
+        // ДЕЛА (оптимизация)
+        //      можно хранить где-то рядом признак наличия коллизий,
+        //      и если он не выставлен, то тогда сразу говорить,
+        //      что запись найдена и пропускать сравнение строк
+        if (String_Equal(itemKey, key))
+        {
+            result.Type = HashTableResultType_Match;
+            result.Entry = item;
+            return result;
+        }
+        if (count >= capacity)
+        {
+            result.Type = HashTableResultType_CapacityReached;
+            return result;
+        }
+        index = index < capacity - 1 ? index + 1 : 0;
+    }
+    result.Type = HashTableResultType_Empty;
+    result.Entry = item;
+    return result;
+}
+
+size_t HashTable_Count(HashTable* ht)
+{
+    size_t count    = 0;
+    size_t itemSize = ht->ItemSize;
+    u8*    items    = ht->Items;
+    for (size_t i = 0; i < ht->Capacity; i++)
+    {
+        HashEntry* item    = (HashEntry*)(items + i * itemSize);
+        String     itemKey = item->Key;
+        if (itemKey.Str != nil)
+        {
+            count++;
+        }
+    }
+    return count;
+}
+
+HashTableIterator HashTable_Iterate(HashTable* ht)
+{
+    assert(ht != nil);
+    HashTableIterator it = { .Table = ht };
+    HashTable_Next(&it);
+    return it;
+}
+
+void HashTable_Next(HashTableIterator* it)
+{
+    assert(it != nil);
+    HashTable* ht       = it->Table;
+    size_t     itemSize = ht->ItemSize;
+    u8*        items    = ht->Items;
+    if (it->Entry != nil)
+    {
+        it->Index++;
+    }
+    for (; it->Index < it->Table->Capacity; it->Index++)
+    {
+        HashEntry* item    = (HashEntry*)(items + it->Index * itemSize);
+        String     itemKey = item->Key;
+        if (itemKey.Str != nil)
+        {
+            it->Entry = item;
+            return;
+        }
+    }
+    it->Eof = true;
+}
+
+void HashTable_Copy(HashTable* source, HashTable* target)
+{
+    assert(source != nil);
+    assert(target != nil);
+    assert(source->Items != nil);
+    assert(target->Items != nil);
+    assert(target->ItemSize == source->ItemSize);
+    assert(target->Capacity >= source->Capacity);
+    for (HashTableIterator it = HashTable_Iterate(source);
+         !it.Eof;
+         HashTable_Next(&it))
+    {
+        HashEntry* sourceEntry = it.Entry;
+        String key = sourceEntry->Key;
+        if (key.Str == nil)
+        {
+            continue;
+        }
+        HashTableResult r = HashTable_Find(target, key);
+        if (r.Type != HashTableResultType_CapacityReached)
+        {
+            memcpy(r.Entry, it.Entry, source->ItemSize);
+        }
+    }
+}
+
+#endif // NZC_NZC_HASHTABLE_ENABLED
 
 #endif // NZC_NZC_IMPLEMENTATION
