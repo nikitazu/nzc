@@ -50,10 +50,11 @@
  *
  * // Подключите заголовочный файл
  * #define NZC_NZC_IMPLEMENTATION                             // определить флаг в файле реализации
- * #define NZC_NZC_MD5_HASH_ENABLED                           // включить алгоритм хеширования MD5
+ * #define NZC_NZC_MD5_HASH_ENABLED                           // включить хеширование MD5
  * #define NZC_NZC_MD5_HASH_DEBUG_PRINT_CHUNK_MEMORY_ENABLED  // включить отладочную печать MD5
- * #define NZC_NZC_SHA1_HASH_ENABLED                          // включить алгоритм хеширования SHA1
+ * #define NZC_NZC_SHA1_HASH_ENABLED                          // включить хеширование SHA1
  * #define NZC_NZC_SHA1_HASH_DEBUG_PRINT_CHUNK_MEMORY_ENABLED // включить отладочную печать SHA1
+ * #define NZC_NZC_SIPHASH_ENABLED                            // включить хеширование SipHash-2-4
  * #define NZC_NZC_DOUBLY_LINKED_LIST_ENABLED                 // включить двое-связанный список
  * #define NZC_NZC_BINARY_SEARCH_TREE_LIST_ENABLED            // включить бинарное поисковое древо
  * #define NZC_NZC_HASHTABLE_ENABLED                          // включить хештаблицу
@@ -767,8 +768,30 @@ bool HashSha1_WriteStringToBuffer(HashSha1* hash, char* outBuffer, size_t outBuf
 
 #endif // NZC_NZC_SHA1_HASH_ENABLED
 
+#ifdef NZC_NZC_SIPHASH_ENABLED
+
+/*
+ * Примечание: реализация SIPHASH основана на SipHash reference C implemntation,
+ * и доступна в соответствии с оригинальной лицензией (текст ниже).
+ *
+ * SipHash reference C implementation
+ *
+ * Copyright (c) 2012-2022 Jean-Philippe Aumasson
+ * <jeanphilippe.aumasson@gmail.com>
+ * Copyright (c) 2012-2014 Daniel J. Bernstein <djb@cr.yp.to>
+ *
+ * To the extent possible under law, the author(s) have dedicated all copyright
+ * and related and neighboring rights to this software to the public domain
+ * worldwide. This software is distributed without any warranty.
+ *
+ * You should have received a copy of the CC0 Public Domain Dedication along
+ * with
+ * this software. If not, see
+ * <http://creativecommons.org/publicdomain/zero/1.0/>.
+ */
+
 /**
- * [SEC253] ЗАГ SIPHASH
+ * [SEC253] ЗАГ SIPHASH-2-4
  */
 
 #define SIPHASH_64_SIZE            8
@@ -809,6 +832,7 @@ void SipHash128_Write(SipHash128* hash, FILE* f);
 bool SipHash128_WriteStringToBuffer(SipHash128* hash,
                                     char* outBuffer,
                                     size_t outBufferSize);
+#endif // NZC_NZC_SIPHASH_ENABLED
 
 /**
  * [SEC254] ЗАГ FNV1A
@@ -1756,6 +1780,8 @@ bool HashSha1_WriteStringToBuffer(HashSha1* hash, char* outBuffer, size_t outBuf
  * [SEC253] РЕА SIPHASH
  */
 
+#ifdef NZC_NZC_SIPHASH_ENABLED
+
 #define SIPHASH_ROUND                         \
     do {                                      \
         v0 += v1;                             \
@@ -1966,6 +1992,8 @@ bool SipHash128_WriteStringToBuffer(SipHash128* hash,
     }
     return true;
 }
+
+#endif // NZC_NZC_SIPHASH_ENABLED
 
 /**
  * [SEC254] РЕА FNV1A
