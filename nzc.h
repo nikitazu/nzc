@@ -25,6 +25,8 @@
  * [SEC21] ОГЛ Аллокатор типа арена
  * [SEC22] ОГЛ Векторы 2D
  * [SEC23] ОГЛ Строки
+ * [SEC231] ОГЛ Строка (8-бит)
+ * [SEC232] ОГЛ Строка (16-бит)
  * [SEC24] ОГЛ Парсинг чисел
  * [SEC25] ОГЛ Хеши
  * [SEC251] ОГЛ MD5
@@ -413,10 +415,11 @@ typedef Vec2u64 ulvec2;
 
 /**
  * [SEC23] ЗАГ Строки
+ * [SEC231] ЗАГ Строка (8-бит)
  */
 
 /**
- * Строка
+ * Строка (8-бит)
  *
  * @field Length размер строки
  * @field Str    указатель на начало строки
@@ -520,6 +523,132 @@ char* str_SearchIgnoreCase(const char* haystack, const char* needle);
  * Примечание: ожидает нуль-терминированный массив символов в качестве строки
  */
 bool str_IsPositiveInt32(const char* s);
+
+/**
+ * [SEC24] ЗАГ Парсинг чисел
+ */
+
+/**
+ * Распознаёт целое 32-битное число со знаком в предоставленном буфере
+ *
+ * @param buffer указатель на буфер символов
+ * @param offset сдвиг от начала буфера
+ * @param count  кол-во элементов после сдвига, которое нужно распознать
+ * @return       распознанное число или 0
+ */
+i32 i32_Parse(const char* buffer, size_t offset, size_t count);
+
+/**
+ * Распознаёт целое 64-битное число со знаком в предоставленном буфере
+ *
+ * @param buffer указатель на буфер символов
+ * @param offset сдвиг от начала буфера
+ * @param count  кол-во элементов после сдвига, которое нужно распознать
+ * @return       распознанное число или 0
+ */
+i64 i64_Parse(const char* buffer, size_t offset, size_t count);
+
+/**
+ * Распознаёт 32-битное число с плавающей запятой со знаком в предоставленном буфере
+ *
+ * @param buffer указатель на буфер символов
+ * @param offset сдвиг от начала буфера
+ * @param count  кол-во элементов после сдвига, которое нужно распознать
+ * @return       распознанное число или 0.f
+ */
+f32 f32_Parse(const char* buffer, size_t offset, size_t count);
+
+/**
+ * [SEC232] ЗАГ Строка (16-бит)
+ */
+
+/**
+ * Строка (16-бит) - используется для работы с текстом в формате UTF-16.
+ *
+ * Примечание:
+ *
+ *   В Win32 API соответствующие типы и функции имеют приставку или суффикс 'w'.
+ *   Символы называются широкими (WideCharacter) и соответствуют типу wchar_t,
+ *   доступ к ним спрятан за макросами и активируется флагами UNIСODE и _UNICODE.
+ *
+ *   Библиотека NZC никак не реагирует на флаги UNICODE и _UNICODE, и предлагает
+ *   пользователю самостоятельно без шаманских танцев с бубнами решить
+ *   где ему использовать тип String, а где String16.
+ *
+ * @field Length размер строки
+ * @field Str    указатель на начало строки
+ */
+typedef struct String16
+{
+    size_t         Length;
+    const wchar_t* Str;
+} String16;
+
+/**
+ * Создаёт строку из массива символов
+ *
+ * @param str указатель на массив символов
+ */
+String16 String16_FromChars(const wchar_t* str);
+
+/**
+ * Сравнивает две строки с учётом регистра символов
+ *
+ * @param a одна строка
+ * @param b другая строка
+ * @return  истина, если строки идентичны, иначе - ложь
+ */
+bool String16_Equal(String16 a, String16 b);
+
+/**
+ * Сравнивает два массива символов строки с учётом регистра символов для сортировки
+ *
+ * @param s1   первый массив символов
+ * @param len1 длина первого массива
+ * @param s2   второй массив символов
+ * @param len2 длина второго массива
+ * @return      0 - если массивы одинаковые
+ *              1 - если первый массив больше
+ *             -1 - если первый массив меньше
+ *
+ * Примечание: массивы считаются одинаковыми, если их указатели равны
+ *             или их длина и содержимое совпадают.
+ *
+ *             Всякий массив считается больше другого,
+ *             если его указатель не nil, а другой указател nil.
+ *
+ *             Всякий массив считается больше другого,
+ *             если в нём есть символы с большим значением
+ *             в порядке расположения, в т.ч. и за счёт большей длины.
+ */
+i32 str16_Compare(const wchar_t* s1, size_t len1,
+                  const wchar_t* s2, size_t len2);
+
+/**
+ * Сравнивает две строки с учётом регистра символов для сортировки
+ *
+ * @param a первая строка
+ * @param b вторая строка
+ * @return   0 - если строки одинаковые
+ *           1 - если первая строка больше
+ *          -1 - если первая строка меньше
+ *
+ * Примечание: алгоритм сравненеия аналогичен `str_Compare`
+ */
+i32 String16_Compare(String16 a, String16 b);
+
+/**
+ * Ищет строку-иголку `needle` в строке-стоге-сена `haystack`
+ * без учёта регистра символов
+ *
+ * @param haystack строка, в которой осуществляется поиск
+ * @param needle   искомая подстрока
+ * @return         в случае успеха - указатель на расположение подстроки
+ *                 в случае неудачи - nil
+ *
+ * Примечание: ожидает нуль-терминированные массивы символов в качестве строк
+ */
+const wchar_t* str16_SearchIgnoreCase(const wchar_t* haystack, const wchar_t* needle);
 
 /**
  * [SEC24] ЗАГ Парсинг чисел
@@ -1224,6 +1353,7 @@ Arena Arena_CreateCopy(const Arena* source, size_t newSize)
 
 /**
  * [SEC23] РЕА Строки
+ * [SEC231] РЕА Строка (8-бит)
  */
 
 String String_FromChars(const char* str)
@@ -1257,7 +1387,7 @@ i32 str_Compare(const char* s1, size_t len1,
     if (s1 == s2) { return 0; }
     if (s1 == nil && s2 != nil) { return  1; }
     if (s2 == nil && s1 != nil) { return -1; }
-    for (i32 i = 0; i < len1 && i < len2; i++)
+    for (size_t i = 0; i < len1 && i < len2; i++)
     {
         if (s1[i] > s2[i]) { return  1; }
         if (s1[i] < s2[i]) { return -1; }
@@ -1328,6 +1458,81 @@ bool str_IsPositiveInt32(const char* s)
     }
     return true;
 }
+
+/**
+ * [SEC232] РЕА Строка (16-бит)
+ */
+
+String16 String16_FromChars(const wchar_t* str)
+{
+    size_t len = str == nil ? 0 : wcslen(str);
+    return (String16){ .Length = len, .Str = str };
+}
+
+bool String16_Equal(String16 a, String16 b)
+{
+    if (a.Str == b.Str) { return true; }
+    if (a.Length != b.Length) { return false; }
+    if (a.Str == nil) { return false; }
+    if (b.Str == nil) { return false; }
+    return memcmp(a.Str, b.Str, a.Length * sizeof(wchar_t)) == 0;
+}
+
+i32 str16_Compare(const wchar_t* s1, size_t len1,
+                  const wchar_t* s2, size_t len2)
+{
+    if (s1 == s2) { return 0; }
+    if (s1 == nil && s2 != nil) { return  1; }
+    if (s2 == nil && s1 != nil) { return -1; }
+    for (size_t i = 0; i < len1 && i < len2; i++)
+    {
+        if (s1[i] > s2[i]) { return  1; }
+        if (s1[i] < s2[i]) { return -1; }
+    }
+    if (len1 < len2) { return -1; }
+    if (len1 > len2) { return  1; }
+    return 0;
+}
+
+i32 String16_Compare(String16 a, String16 b)
+{
+    return str16_Compare(a.Str, a.Length, b.Str, b.Length);
+}
+
+const wchar_t* str16_SearchIgnoreCase(const wchar_t* haystack, const wchar_t* needle)
+{
+    if (haystack == nil || needle == nil || *needle == '\0')
+    {
+        return nil;
+    }
+
+    for (const wchar_t* hs = haystack; *hs; hs++)
+    {
+        const wchar_t* h = hs;
+        const wchar_t* n = needle;
+        bool match = true;
+
+        for (;;)
+        {
+            if (*n == '\0') { break; }
+            if (*h == '\0') { match = false; break; }
+
+            wint_t ch = (wint_t)*h;
+            wint_t cn = (wint_t)*n;
+            if (towlower(ch) != towlower(cn)) { match = false; break; }
+
+            h++;
+            n++;
+        }
+
+        if (match)
+        {
+            return hs;
+        }
+    }
+    return nil;
+}
+
 
 /**
  * [SEC24] РЕА Парсинг чисел
