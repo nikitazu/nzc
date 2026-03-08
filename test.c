@@ -279,6 +279,26 @@ void TEST_u64_ByteSwap(bool* success)
     PRINT("TEST u64_ByteSwap - OK");
 }
 
+void TEST_Guid(bool* success)
+{
+    PRINT("TEST Guid");
+    u8 guid[GUID_SIZE_BYTES];
+    char guids[50];
+    for (size_t i = 0; i < 4; i++)
+    {
+        Guid_Nextv4(guid);
+        Guid_WriteStringToBuffer(guid, guids, 255, Guid_FormatDash);
+        PRINT("GUIDv4[%zu]: %s", i, guids);
+    }
+    for (size_t i = 0; i < 4; i++)
+    {
+        Guid_Nextv7(guid);
+        Guid_WriteStringToBuffer(guid, guids, 255, Guid_FormatDash);
+        PRINT("GUIDv7[%zu]: %s", i, guids);
+    }
+    PRINT("TEST Guid - OK");
+}
+
 void TEST_HashMd5(bool* success)
 {
     PRINT("TEST Hash (MD5)");
@@ -1750,6 +1770,7 @@ i32 main(i32 argc, const char** args)
     TEST_u16_ByteSwap(&success);
     TEST_u32_ByteSwap(&success);
     TEST_u64_ByteSwap(&success);
+    TEST_Guid(&success);
     TEST_HashMd5(&success);
     TEST_HashSha1(&success);
     TEST_SipHash64(&success);

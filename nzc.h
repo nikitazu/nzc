@@ -19,6 +19,7 @@
  * [SEC13] ОГЛ Макросы на каждый день
  * [SEC14] ОГЛ Простая математика
  * [SEC15] ОГЛ Операции над байтами
+ * [SEC16] ОГЛ Генератор случайных числе PCG
  *
  * [SEC20] ОГЛ Типы данных
  * -----------------------
@@ -33,7 +34,7 @@
  * [SEC252] ОГЛ SHA1
  * [SEC253] ОГЛ SIPHASH
  * [SEC254] ОГЛ FNV1A
- * [SEC26] ДЕЛА GUID
+ * [SEC26] ОГЛ GUID
  *
  * [SEC30] ОГЛ Контейнеры
  * ----------------------
@@ -93,6 +94,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <time.h>
 
 #define nil NULL
 
@@ -137,6 +139,8 @@ typedef double f64;
 #define KB(x) (((size_t)x) * (size_t)1024)
 #define MB(x) ((size_t)KB(x) * (size_t)1024)
 #define GB(x) ((size_t)MB(x) * (size_t)1024)
+
+#define HAS_FLAG(NUM, FLAG) ((NUM & FLAG) == FLAG)
 
 #define ARRAY_STATIC_COUNT(ARR) \
     (sizeof(ARR) / sizeof(ARR[0]))
@@ -221,6 +225,7 @@ typedef union FixedArrayU32
 typedef union FixedArrayU64
 {
     u64 Value;
+    u32 Int32[2];
     u8  Bytes[8];
 } FixedArrayU64;
 
@@ -234,6 +239,106 @@ u16 u16_SwapBytes(u16 v);
 u32 u32_SwapBytes(u32 v);
 u64 u64_SwapBytes(u64 v);
 void DebugPrintMemory(FILE* f, u8* buffer, size_t size);
+
+/**
+ * [SEC16] ЗАГ Генератор случайных числе PCG
+ */
+
+/*
+ * Примечание: реализация PCG взята с https://www.pcg-random.org
+ * (минимальная версия) и доступна в соответствии с оригинальной
+ * лицензией (текст ниже).
+ *
+ * PCG Random Number Generation for C.
+ *
+ * Copyright 2014 Melissa O'Neill <oneill@pcg-random.org>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * For additional information about the PCG random number generation scheme,
+ * including its license and other licensing options, visit
+ *
+ *     http://www.pcg-random.org
+ */
+
+/*
+ * This code is derived from the full C implementation, which is in turn
+ * derived from the canonical C++ PCG implementation. The C++ version
+ * has many additional features and is preferable if you can use C++ in
+ * your project.
+ */
+
+#ifndef PCG_BASIC_H_INCLUDED
+#define PCG_BASIC_H_INCLUDED 1
+
+#include <inttypes.h>
+
+#if __cplusplus
+extern "C" {
+#endif
+
+struct pcg_state_setseq_64 {    // Internals are *Private*.
+    uint64_t state;             // RNG state.  All values are possible.
+    uint64_t inc;               // Controls which RNG sequence (stream) is
+                                // selected. Must *always* be odd.
+};
+typedef struct pcg_state_setseq_64 pcg32_random_t;
+
+// If you *must* statically initialize it, here's one.
+
+#define PCG32_INITIALIZER   { 0x853c49e6748fea9bULL, 0xda3e39cb94b95bdbULL }
+
+// pcg32_srandom(initstate, initseq)
+// pcg32_srandom_r(rng, initstate, initseq):
+//     Seed the rng.  Specified in two parts, state initializer and a
+//     sequence selection constant (a.k.a. stream id)
+
+void pcg32_srandom(uint64_t initstate, uint64_t initseq);
+void pcg32_srandom_r(pcg32_random_t* rng, uint64_t initstate,
+                     uint64_t initseq);
+
+// pcg32_random()
+// pcg32_random_r(rng)
+//     Generate a uniformly distributed 32-bit random number
+
+uint32_t pcg32_random(void);
+uint32_t pcg32_random_r(pcg32_random_t* rng);
+
+// pcg32_boundedrand(bound):
+// pcg32_boundedrand_r(rng, bound):
+//     Generate a uniformly distributed number, r, where 0 <= r < bound
+
+uint32_t pcg32_boundedrand(uint32_t bound);
+uint32_t pcg32_boundedrand_r(pcg32_random_t* rng, uint32_t bound);
+
+#if __cplusplus
+}
+#endif
+
+#endif // PCG_BASIC_H_INCLUDED
+
+#define NZC_RANDOM32_INIT_VALUE ((Random32){PCG32_INITIALIZER, 42U, 54U})
+
+typedef struct Random32
+{
+    pcg32_random_t Impl;
+    u32            InitState;
+    u32            InitSeq;
+} Random32;
+
+void Random32_Init(Random32* rng);
+u32 Random32_Next(Random32* rng);
+
 
 /**
  * [SEC20] ЗАГ Типы данных
@@ -981,6 +1086,111 @@ bool SipHash128_WriteStringToBuffer(SipHash128* hash,
  */
 u64 FNV1A64_Compute(const void* buffer, size_t bufferSize);
 
+/*
+ * [SEC26] ЗАГ GUID
+ */
+
+/** Размер UUID в байтах */
+#define GUID_SIZE_BYTES 16
+
+/** Размер строгового представления UUID в символах без черточек и без нуль терминатора */
+#define GUID_STRING_LENGTH 32
+
+/** Значение генератора для статической инициализации */
+#define NZC_GUIDGEN_INITIAL_VALUE ((GuidGen){.Random = NZC_RANDOM32_INIT_VALUE})
+
+/**
+ * Генератор GUID.
+ *
+ * Содержит в себе источник псевдо-случайности.
+ */
+typedef struct GuidGen
+{
+    Random32 Random;
+} GuidGen;
+
+/**
+ * Форматы GUID (для отображения).
+ */
+typedef enum Guid_Format
+{
+    /** Без форматирования. */
+    Guid_FormatNone      = 0,                 // 0000
+
+    /** Через чёрточки. */
+    Guid_FormatDash      = 1 << 0,            // 0001
+
+    /** В нижнем регистре. */
+    Guid_FormatLowerCase = 1 << 1,            // 0010
+
+    /** Как в документации RFC-4122 (через чёрточки в нижнем регистре). */
+    Guid_FormatRfc4122   = (1 << 0 | 1 << 1), // 0011
+} Guid_Format;
+
+/**
+ * Инициализировать генератор GUID.
+ *
+ * @param gg указатель на структуру генератора.
+ */
+void Guid_Init(GuidGen* gg);
+
+/**
+ * Выдать следующий GUID версии 4 из глобального генератора.
+ *
+ * @param buf буфер для записи GUID.
+ * @return признак успеха операции.
+ *
+ * Важно: см. `Guid_Nextv4Ex`.
+ */
+bool Guid_Nextv4(void* buf);
+
+/**
+ * Выдать следующий GUID версии 4 из переданного генератора `gg'.
+ *
+ * @param gg указатель на структуру генератора.
+ * @param buf буфер для записи GUID.
+ * @return признак успеха операции.
+ *
+ * Важно: буфер `buf' должен быть размера не менее, чем `GUID_SIZE_BYTES'.
+ */
+bool Guid_Nextv4Ex(GuidGen* gg, void* buf);
+
+/**
+ * Выдать следующий GUID версии 7 из глобального генератора.
+ *
+ * @param buf буфер для записи GUID.
+ * @return признак успеха операции.
+ *
+ * Важно: см. `Guid_Nextv4Ex`.
+ */
+bool Guid_Nextv7(void* buf);
+
+/**
+ * Выдать следующий GUID версии 7 из переданного генератора `gg'.
+ *
+ * @param gg указатель на структуру генератора.
+ * @param buf буфер для записи GUID.
+ * @return признак успеха операции.
+ *
+ * Важно: буфер `buf' должен быть размера не менее, чем `GUID_SIZE_BYTES'.
+ */
+bool Guid_Nextv7Ex(GuidGen* gg, void* buf);
+
+/**
+ * Вывести GUID в буфер.
+ *
+ * Печатает байты из буфера `guid' как HEX-строку в буфер `outBuffer'.
+ *
+ * @param guid          буфер содержащий GUID
+ * @param outBuffer     буфер для вывода
+ * @param outBufferSize размер буфера `buffer'
+ * @param format        формат вывода
+ * @return              признак успеха операции
+ */
+bool Guid_WriteStringToBuffer(void* guid,
+                              char* outBuffer, size_t outBufferSize,
+                              Guid_Format format);
+
 /**
  * [SEC30] ЗАГ Контейнеры
  * ----------------------
@@ -1256,6 +1466,102 @@ void DebugPrintMemory(FILE* f, u8* buffer, size_t size)
             fprintf(stderr, " ");
         }
     }
+}
+
+/**
+ * [SEC16] РЕА Генератор случайных числе PCG
+ */
+
+// state for global RNGs
+
+static pcg32_random_t pcg32_global = PCG32_INITIALIZER;
+
+// pcg32_srandom(initstate, initseq)
+// pcg32_srandom_r(rng, initstate, initseq):
+//     Seed the rng.  Specified in two parts, state initializer and a
+//     sequence selection constant (a.k.a. stream id)
+
+void pcg32_srandom_r(pcg32_random_t* rng, uint64_t initstate, uint64_t initseq)
+{
+    rng->state = 0U;
+    rng->inc = (initseq << 1u) | 1u;
+    pcg32_random_r(rng);
+    rng->state += initstate;
+    pcg32_random_r(rng);
+}
+
+void pcg32_srandom(uint64_t seed, uint64_t seq)
+{
+    pcg32_srandom_r(&pcg32_global, seed, seq);
+}
+
+// pcg32_random()
+// pcg32_random_r(rng)
+//     Generate a uniformly distributed 32-bit random number
+
+uint32_t pcg32_random_r(pcg32_random_t* rng)
+{
+    uint64_t oldstate = rng->state;
+    rng->state = oldstate * 6364136223846793005ULL + rng->inc;
+    uint32_t xorshifted = ((oldstate >> 18u) ^ oldstate) >> 27u;
+    uint32_t rot = oldstate >> 59u;
+    return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
+}
+
+uint32_t pcg32_random()
+{
+    return pcg32_random_r(&pcg32_global);
+}
+
+// pcg32_boundedrand(bound):
+// pcg32_boundedrand_r(rng, bound):
+//     Generate a uniformly distributed number, r, where 0 <= r < bound
+
+uint32_t pcg32_boundedrand_r(pcg32_random_t* rng, uint32_t bound)
+{
+    // To avoid bias, we need to make the range of the RNG a multiple of
+    // bound, which we do by dropping output less than a threshold.
+    // A naive scheme to calculate the threshold would be to do
+    //
+    //     uint32_t threshold = 0x100000000ull % bound;
+    //
+    // but 64-bit div/mod is slower than 32-bit div/mod (especially on
+    // 32-bit platforms).  In essence, we do
+    //
+    //     uint32_t threshold = (0x100000000ull-bound) % bound;
+    //
+    // because this version will calculate the same modulus, but the LHS
+    // value is less than 2^32.
+
+    uint32_t threshold = -bound % bound;
+
+    // Uniformity guarantees that this loop will terminate.  In practice, it
+    // should usually terminate quickly; on average (assuming all bounds are
+    // equally likely), 82.25% of the time, we can expect it to require just
+    // one iteration.  In the worst case, someone passes a bound of 2^31 + 1
+    // (i.e., 2147483649), which invalidates almost 50% of the range.  In 
+    // practice, bounds are typically small and only a tiny amount of the range
+    // is eliminated.
+    for (;;) {
+        uint32_t r = pcg32_random_r(rng);
+        if (r >= threshold)
+            return r % bound;
+    }
+}
+
+uint32_t pcg32_boundedrand(uint32_t bound)
+{
+    return pcg32_boundedrand_r(&pcg32_global, bound);
+}
+
+void Random32_Init(Random32* rng)
+{
+    pcg32_srandom_r(&rng->Impl, rng->InitState, rng->InitSeq);
+}
+
+u32 Random32_Next(Random32* rng)
+{
+    return pcg32_random_r(&rng->Impl);
 }
 
 /**
@@ -2215,6 +2521,134 @@ u64 FNV1A64_Compute(const void* buffer, size_t bufferSize)
     }
     return hash;
 }
+
+/*
+ * [SEC26] РЕА GUID
+ */
+
+static GuidGen G_NZC_GuidGen = NZC_GUIDGEN_INITIAL_VALUE;
+
+void Guid_Init(GuidGen* gg)
+{
+    Random32_Init(&gg->Random);
+}
+
+bool Guid_Nextv4(void* buf)
+{
+    return Guid_Nextv4Ex(&G_NZC_GuidGen, buf);
+}
+
+bool Guid_Nextv4Ex(GuidGen* gg, void* buf)
+{
+    if (buf == nil) { return false; }
+    u8* target = buf;
+
+    *((u32*)(target + 0*4)) = Random32_Next(&gg->Random);
+    *((u32*)(target + 1*4)) = Random32_Next(&gg->Random);
+    *((u32*)(target + 2*4)) = Random32_Next(&gg->Random);
+    *((u32*)(target + 3*4)) = Random32_Next(&gg->Random);
+
+    // Установить биты версии 4
+    // биты: 12й, 13й, 14й, 15й
+    // 4 = 0000 0100 (мы ставим верхние биты в 0100)
+    //
+    target[6] |= 0x40; // 0100 0000
+    target[6] &= 0x4F; // 0100 1111
+
+    // Установить биты зарезервированные RFC-4122
+    //
+    target[8] |= 0x80; // 1000 0000 : 7й бит = 1
+    target[8] &= 0xBF; // 1011 1111 : 6й бит = 0
+
+    return true;
+}
+
+bool Guid_Nextv7(void* buf)
+{
+    return Guid_Nextv7Ex(&G_NZC_GuidGen, buf);
+}
+
+bool Guid_Nextv7Ex(GuidGen* gg, void* buf)
+{
+    if (buf == nil) { return false; }
+    u8* target = buf;
+
+    FixedArrayU64 x;
+    struct timespec ts;
+    if (timespec_get(&ts, TIME_UTC) != TIME_UTC) { return false; }
+    x.Int32[0] = ts.tv_nsec;
+    x.Int32[1] = ts.tv_sec;
+
+    for (size_t i = 0; i < 8; i++)
+    {
+        target[7 - i] = x.Bytes[i];
+    }
+
+    *((u32*)(target + 2*4)) = Random32_Next(&gg->Random);
+    *((u32*)(target + 3*4)) = Random32_Next(&gg->Random);
+
+    // Установить биты версии 4
+    // биты: 12й, 13й, 14й, 15й
+    // 7 = 0000 0111 (мы ставим верхние биты в 0111)
+    //
+    target[6] |= 0x70; // 0111 0000
+    target[6] &= 0x7F; // 0111 1111
+
+    // Установить биты зарезервированные RFC-4122
+    //
+    target[8] |= 0x80; // 1000 0000 : 7й бит = 1
+    target[8] &= 0xBF; // 1011 1111 : 6й бит = 0
+
+    return true;
+}
+
+bool Guid_WriteStringToBuffer(void* guid,
+                              char* outBuffer, size_t outBufferSize,
+                              Guid_Format format)
+{
+    assert(guid != nil);
+    assert(outBuffer != nil);
+    u8* guidArr = guid;
+
+    size_t requiredSize = GUID_STRING_LENGTH + 1;
+    if (HAS_FLAG(format, Guid_FormatDash)) { requiredSize += 4; }
+    if (outBufferSize < requiredSize) { return false; }
+
+    char* formatString = "%02X";
+    if (HAS_FLAG(format, Guid_FormatLowerCase)) { formatString = "%02x"; }
+
+    char* dashFormatString = "-%02X";
+    if (HAS_FLAG(format, Guid_FormatLowerCase)) { dashFormatString = "-%02x"; }
+
+    char* outBuf = outBuffer;
+    if (HAS_FLAG(format, Guid_FormatDash))
+    {
+        for (size_t i = 0; i < GUID_SIZE_BYTES; i++)
+        {
+            if (i == 4 || i == 6 || i == 8 || i == 10)
+            {
+                sprintf(outBuf, dashFormatString, guidArr[i]);
+                outBuf += 3;
+            }
+            else
+            {
+                sprintf(outBuf, formatString, guidArr[i]);
+                outBuf += 2;
+            }
+        }
+    }
+    else
+    {
+        for (size_t i = 0; i < GUID_SIZE_BYTES; i++)
+        {
+            sprintf(outBuf, formatString, guidArr[i]);
+            outBuf += 2;
+        }
+    }
+
+    return true;
+}
+
 
 /**
  * [SEC30] РЕА Контейнеры
