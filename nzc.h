@@ -714,7 +714,7 @@ bool String16_Equal(String16 a, String16 b);
  * @param str массив символов
  * @return    истина, если данные идентичны, иначе - ложь
  */
-bool String16_EqualChars(String s, const wchar_t* str);
+bool String16_EqualChars(String16 s, const wchar_t* str);
 
 /**
  * Сравнивает два массива символов строки с учётом регистра символов для сортировки
@@ -1818,7 +1818,7 @@ bool String16_Equal(String16 a, String16 b)
     return memcmp(a.Str, b.Str, a.Length * sizeof(wchar_t)) == 0;
 }
 
-bool String16_EqualChars(String s, const wchar_t* str)
+bool String16_EqualChars(String16 s, const wchar_t* str)
 {
     if (s.Str == str) { return true; }
     if (s.Str == nil) { return false; }
