@@ -81,6 +81,7 @@
 #include <string.h>
 #include <stdckdint.h>
 #include <stddef.h>
+#include <time.h>
 
 /**
  * [SEC12] ЗАГ Стандартные типы и литералы
@@ -94,7 +95,6 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <time.h>
 
 #define nil NULL
 
