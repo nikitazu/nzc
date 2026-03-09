@@ -508,7 +508,7 @@ void TEST_Arena(bool* success)
         return;
     }
 
-    char* buffer = Arena_Push(&arena, 255, char); // TODO cast inside macro
+    char* buffer = Arena_Push(&arena, 255, char);
     if (buffer == nil)
     {
         PRINT_Failed("%s", "Arena_Alloc (char* buffer)", "pointer", "nil");
@@ -580,7 +580,9 @@ void TEST_Arena(bool* success)
     *barN1 = 123;
     *barN2 = 0.456f;
 
+    setlocale(LC_ALL, "C");
     sprintf(buffer, "s: %s d: %d f: %f", foo, *barN1, *barN2);
+    setlocale(LC_ALL, ".utf8");
 
     if (strcmp(buffer, "s: howdy! d: 123 f: 0.456000") != 0)
     {
@@ -600,8 +602,8 @@ void TEST_Arena(bool* success)
         goto cleanup;
     }
 
-    foo = Arena_Push(&arena, 18446744073709551615U, i32);
-    if (foo != nil)
+    i32* fooz = Arena_Push(&arena, 18446744073709551615U, i32);
+    if (fooz != nil)
     {
         PRINT_Failed("%s", "Arena_Push (overflow)",
                      "nil", "object");
@@ -781,7 +783,6 @@ cleanup:
 
 void TEST_String(bool* success)
 {
-    setlocale(LC_ALL, ".utf8");
     const char* testString = "test";
     String s = String_FromChars(testString);
 
@@ -930,6 +931,126 @@ void TEST_String(bool* success)
         if (!String_Equal(substr1, substr2))
         {
             PRINT_Failed("%s", "String_Equal (substr1, substr2)", "true", "false");
+            *success = false;
+        }
+    }
+}
+
+
+void TEST_String16(bool* success)
+{
+    const wchar_t* testString = L"test";
+    String16 s = String16_FromChars(testString);
+
+    if (s.Str != testString)
+    {
+        PRINT16_Failed("%ws", L"String16_FromChars (.Str)", testString, s.Str);
+        *success = false;
+    }
+
+    if (s.Length != wcslen(testString))
+    {
+        PRINT16_Failed(L"%ws", L"String16_FromChars (.Length)", testString, s.Str);
+        *success = false;
+    }
+
+    // ДЕЛА String16_CopyTo
+
+    if (!String16_EqualChars(s, testString))
+    {
+        PRINT16_Failed(L"%ws", L"String16_EqualChars", s.Str, testString);
+        *success = false;
+    }
+
+    if (String16_EqualChars(s, nil))
+    {
+        PRINT16_Failed(L"%ws", L"String16_EqualChars (nil)", "false", "true");
+        *success = false;
+    }
+
+    i32 compareResult = str16_Compare(nil, 0, nil, 0);
+    if (compareResult != 0)
+    {
+        PRINT16_Failed("%d", L"str16_Compare(nil, 0, nil, 0)", 0, compareResult);
+        *success = false;
+    }
+
+    compareResult = str16_Compare(nil, 1, nil, 1);
+    if (compareResult != 0)
+    {
+        PRINT16_Failed("%d", L"str16_Compare(nil, 1, nil, 1)", 0, compareResult);
+        *success = false;
+    }
+
+    compareResult = str16_Compare(L"a", 1, nil, 0);
+    if (compareResult != -1)
+    {
+        PRINT16_Failed("%d", L"str16_Compare('a', 1, nil, 0)", -1, compareResult);
+        *success = false;
+    }
+
+    compareResult = str16_Compare(nil, 0, L"a", 1);
+    if (compareResult != 1)
+    {
+        PRINT16_Failed("%d", L"str16_Compare(nil, 0, 'a', 1)", 1, compareResult);
+        *success = false;
+    }
+
+    compareResult = str16_Compare(L"a", 1, L"aa", 2);
+    if (compareResult != -1)
+    {
+        PRINT16_Failed("%d", L"str16_Compare('a', 1, 'aa', 2)", -1, compareResult);
+        *success = false;
+    }
+
+    compareResult = str16_Compare(L"aa", 2, L"a", 1);
+    if (compareResult != 1)
+    {
+        PRINT16_Failed("%d", L"str16_Compare('aa', 2, 'a', 1)", 1, compareResult);
+        *success = false;
+    }
+
+    if (!String16_EndsWith(String16_FromChars(L"foo.exe"), String16_FromChars(L".exe")))
+    {
+        PRINT16_Failed(L"%ws", L"String16_EndsWith('foo.exe', '.exe')", L"true", L"false");
+        *success = false;
+    }
+
+    if (String16_EndsWith(String16_FromChars(L"foo.exe"), String16_FromChars(L".jpg")))
+    {
+        PRINT16_Failed(L"%ws", L"String16_EndsWith('foo.exe', '.jpg')", L"false", L"true");
+        *success = false;
+    }
+
+    const wchar_t* match = str16_SearchIgnoreCase(L"foo", L"foo");
+    if (wcscmp(match, L"foo") != 0)
+    {
+        PRINT16_Failed(L"%ws", L"str16_SearchIgnoreCase (foo, f)", "foo", match);
+        *success = false;
+    }
+
+    match = str16_SearchIgnoreCase(L"foo", L"o");
+    if (wcscmp(match, L"oo") != 0)
+    {
+        PRINT16_Failed(L"%ws", L"str16_SearchIgnoreCase (foo, o)", "oo", match);
+        *success = false;
+    }
+
+    match = str16_SearchIgnoreCase(L"foo", L"x");
+    if (match != nil)
+    {
+        PRINT16_Failed(L"%ws", L"str16_SearchIgnoreCase (foo, x)", "nil", match);
+        *success = false;
+    }
+
+    {
+        const wchar_t* input1 = L"abcdefg";
+        const wchar_t* input2 = L"123abcd456";
+        String16 substr1 = { .Str = input1, .Length = 3 };
+        String16 substr2 = { .Str = input2 + 3, .Length = 3 };
+        if (!String16_Equal(substr1, substr2))
+        {
+            PRINT16_Failed(L"%ws", L"string16_Equal (substr1, substr2)", "true", "false");
             *success = false;
         }
     }
@@ -1782,6 +1903,7 @@ void TEST_NZArgBoolExplicit(bool* success)
 
 i32 main(i32 argc, const char** args)
 {
+    setlocale(LC_ALL, ".utf8");
     PRINT("NZC test start");
 
     bool success = true;
@@ -1814,6 +1936,7 @@ i32 main(i32 argc, const char** args)
     TEST_Arena_CreateCopy(&success);
     TEST_ChildArena(&success);
     TEST_String(&success);
+    TEST_String16(&success);
     TEST_MuString16(&success);
 
     TEST_DoublyLinkedListOnArena(&success);

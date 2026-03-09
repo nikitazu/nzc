@@ -377,7 +377,7 @@ Arena Arena_Create(size_t size);
  * @param TYPE  тип данных значений, добавляемых на арену
  */
 #define Arena_Push(ARENA, COUNT, TYPE) \
-    (Arena_Alloc(ARENA, COUNT, sizeof(TYPE), _Alignof(TYPE)))
+    ((TYPE*)Arena_Alloc(ARENA, COUNT, sizeof(TYPE), _Alignof(TYPE)))
 
 /**
  * Добавляет новые объекты на арену
@@ -715,6 +715,15 @@ bool String16_Equal(String16 a, String16 b);
  * @return    истина, если данные идентичны, иначе - ложь
  */
 bool String16_EqualChars(String16 s, const wchar_t* str);
+
+/**
+ * Проверяет не заканчивается ли строка `s' подстрокой `ends'
+ *
+ * @param s    строка
+ * @param ends подстрока, ожидаемая в качестве окончания
+ * @return     истина, если в конце `s' обнаружена `ends', иначе - ложь
+ */
+bool String16_EndsWith(String16 s, String16 ends);
 
 /**
  * Сравнивает два массива символов строки с учётом регистра символов для сортировки
@@ -1828,6 +1837,15 @@ bool String16_EqualChars(String16 s, const wchar_t* str)
         if (s.Str[i] != str[i]) { return false; }
     }
     return true;
+}
+
+bool String16_EndsWith(String16 s, String16 ends)
+{
+    if (ends.Str == nil) { return true; }
+    if (s.Str == nil) { return false; }
+    i64 deltaLen = s.Length - ends.Length;
+    if (deltaLen < 0) { return false; }
+    return memcmp(s.Str + deltaLen, ends.Str, ends.Length * sizeof(wchar_t)) == 0;
 }
 
 i32 str16_Compare(const wchar_t* s1, size_t len1,
