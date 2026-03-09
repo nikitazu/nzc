@@ -708,6 +708,15 @@ String16 String16_FromChars(const wchar_t* str);
 bool String16_Equal(String16 a, String16 b);
 
 /**
+ * Сравнивает строку с массивом символов с учётом регистра символов
+ *
+ * @param s   строка
+ * @param str массив символов
+ * @return    истина, если данные идентичны, иначе - ложь
+ */
+bool String16_EqualChars(String s, const wchar_t* str);
+
+/**
  * Сравнивает два массива символов строки с учётом регистра символов для сортировки
  *
  * @param s1   первый массив символов
@@ -1807,6 +1816,18 @@ bool String16_Equal(String16 a, String16 b)
     if (a.Str == nil) { return false; }
     if (b.Str == nil) { return false; }
     return memcmp(a.Str, b.Str, a.Length * sizeof(wchar_t)) == 0;
+}
+
+bool String16_EqualChars(String s, const wchar_t* str)
+{
+    if (s.Str == str) { return true; }
+    if (s.Str == nil) { return false; }
+    if (str == nil) { return false; }
+    for (size_t i = 0; i < s.Length; i++)
+    {
+        if (s.Str[i] != str[i]) { return false; }
+    }
+    return true;
 }
 
 i32 str16_Compare(const wchar_t* s1, size_t len1,
