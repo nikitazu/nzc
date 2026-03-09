@@ -28,6 +28,8 @@
  * [SEC23] ОГЛ Строки
  * [SEC231] ОГЛ Строка (8-бит)
  * [SEC232] ОГЛ Строка (16-бит)
+ * [SEC233] ДЕЛА Мутабельная строка (8-бит)
+ * [SEC234] ОГЛ Мутабельная строка (16-бит)
  * [SEC24] ОГЛ Парсинг чисел
  * [SEC25] ОГЛ Хеши
  * [SEC251] ОГЛ MD5
@@ -754,6 +756,29 @@ i32 String16_Compare(String16 a, String16 b);
  * Примечание: ожидает нуль-терминированные массивы символов в качестве строк
  */
 const wchar_t* str16_SearchIgnoreCase(const wchar_t* haystack, const wchar_t* needle);
+
+/**
+ * [SEC233] ДЕЛА Мутабельная строка (8-бит)
+ */
+
+/**
+ * [SEC234] ЗАГ Мутабельная строка (16-бит)
+ */
+
+#define MuString16_CAPACITY_INIT 16
+
+typedef struct MuString16
+{
+    size_t   Capacity;
+    size_t   Length;
+    wchar_t* Str;
+} MuString16;
+
+void MuString16_Destroy(MuString16* ms);
+bool MuString16_Append(MuString16* ms, const wchar_t* chars, size_t maxLen);
+bool MuString16_AppendStr(MuString16* ms, String16 s);
+bool MuString16_Reset(MuString16* ms, const wchar_t* chars, size_t maxLen);
+bool MuString16_Clear(MuString16* ms);
 
 /**
  * [SEC24] ЗАГ Парсинг чисел
@@ -1839,6 +1864,63 @@ const wchar_t* str16_SearchIgnoreCase(const wchar_t* haystack, const wchar_t* ne
     return nil;
 }
 
+
+/**
+ * [SEC234] РЕА Мутабельная строка (16-бит)
+ */
+
+void MuString16_Destroy(MuString16* ms)
+{
+    if (ms->Str != nil)
+    {
+        free(ms->Str);
+        *ms = (MuString16){0};
+    }
+}
+
+bool MuString16_Append(MuString16* ms, const wchar_t* chars, size_t maxLen)
+{
+    const size_t charsLen = wcsnlen(chars, maxLen);
+    const size_t newLen = ms->Length + charsLen;
+    if (ms->Str == nil)
+    {
+        size_t capacity = MuString16_CAPACITY_INIT;
+        if (newLen + 1 > capacity) { capacity = newLen + 1; }
+        ms->Str = malloc(capacity * sizeof(wchar_t));
+        if (ms->Str == nil) { return false; }
+        ms->Capacity = capacity;
+        ms->Length = 0;
+    }
+    if (newLen >= ms->Capacity)
+    {
+        size_t capacity = ms->Capacity * 2;
+        if (newLen + 1 > capacity) { capacity = newLen + 1; }
+        wchar_t* buf = realloc(ms->Str, capacity * sizeof(wchar_t));
+        if (buf == nil) { return false; }
+        ms->Str = buf;
+        ms->Capacity = capacity;
+    }
+    wchar_t* buf = ms->Str + ms->Length;
+    memcpy(buf, chars, (charsLen + 1) * sizeof(wchar_t));
+    ms->Length = newLen;
+    return true;
+}
+
+bool MuString16_AppendStr(MuString16* ms, String16 s)
+{
+    return MuString16_Append(ms, s.Str, s.Length);
+}
+
+bool MuString16_Reset(MuString16* ms, const wchar_t* chars, size_t maxLen)
+{
+    ms->Length = 0;
+    return MuString16_Append(ms, chars, maxLen);
+}
+
+bool MuString16_Clear(MuString16* ms)
+{
+    return MuString16_Reset(ms, L"", 2);
+}
 
 /**
  * [SEC24] РЕА Парсинг чисел

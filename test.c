@@ -9,6 +9,7 @@
 #define NZC_NZARG_IMPLEMENTATION
 #include "nzarg.h"
 #include <stdio.h>
+#include <locale.h>
 
 
 #define PRINT(FMT, ARGS...) (fprintf(stderr, FMT "\n", ARGS))
@@ -21,6 +22,14 @@
             "  got " FMT "\n"                                           \
             "  at %s:%d\n\n",                                           \
             OP, E, A, __FILE__, __LINE__);
+
+#define PRINT16_Failed(FMT, OP, E, A)                                   \
+    fwprintf(stderr,                                                    \
+             L"Error: %ws failed\n"                                     \
+             L"  expected " FMT "\n"                                    \
+             L"  got " FMT "\n"                                         \
+             L"  at %s:%d\n\n",                                         \
+             OP, E, A, __FILE__, __LINE__);
 
 #define PRINT_Vec2Failed(FMT, OP, E, A, F, L)                           \
     fprintf(stderr,                                                     \
@@ -772,6 +781,7 @@ cleanup:
 
 void TEST_String(bool* success)
 {
+    setlocale(LC_ALL, ".utf8");
     const char* testString = "test";
     String s = String_FromChars(testString);
 
@@ -925,6 +935,31 @@ void TEST_String(bool* success)
     }
 }
 
+void TEST_MuString16(bool* success)
+{
+    PRINT("TEST MuString16");
+    String16 foo = String16_FromChars(L"ФУУ");
+    MuString16 ms = {0};
+    MuString16_AppendStr(&ms, foo);
+    MuString16_Append(&ms, L"!!!", 3);
+    String16 expectedResult = String16_FromChars(L"ФУУ!!!");
+    String16 actualResult = String16_FromChars(ms.Str);
+    if (!String16_Equal(expectedResult, actualResult))
+    {
+        PRINT16_Failed(L"%ws", L"MuString16_Append",
+                       expectedResult.Str,
+                       actualResult.Str);
+        *success = false;
+    }
+    if (*success)
+    {
+        PRINT("TEST MuString16 - OK");
+    }
+    else
+    {
+        PRINT("TEST MuString16 - FAILED");
+    }
+}
 
 
 // TEST Doubly Linked List
@@ -1779,6 +1814,7 @@ i32 main(i32 argc, const char** args)
     TEST_Arena_CreateCopy(&success);
     TEST_ChildArena(&success);
     TEST_String(&success);
+    TEST_MuString16(&success);
 
     TEST_DoublyLinkedListOnArena(&success);
     TEST_DoublyLinkedListOnStack(&success);
