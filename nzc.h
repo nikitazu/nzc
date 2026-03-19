@@ -169,6 +169,9 @@ typedef double f64;
      ((u64)((ARR)[4]) << 32) | ((u64)((ARR)[5]) << 40) |          \
      ((u64)((ARR)[6]) << 48) | ((u64)((ARR)[7]) << 56))
 
+#define ASSERT(COND, FAIL_MSG)                  \
+    assert(COND && FAIL_MSG)
+
 /**
  * Хитрый макрос линуксоидов
  * (версия не требующая GCC или CLANG)
@@ -241,6 +244,8 @@ u16 u16_SwapBytes(u16 v);
 u32 u32_SwapBytes(u32 v);
 u64 u64_SwapBytes(u64 v);
 void DebugPrintMemory(FILE* f, u8* buffer, size_t size);
+u32 u32_ColorConvert_RgbaToBgra(u32 rgba);
+void u32_ColorConvertArray_RgbaToBgra(u32* src, u32* tgt, i32 countPx);
 
 /**
  * [SEC16] ЗАГ Генератор случайных числе PCG
@@ -776,6 +781,33 @@ i32 String16_Compare(String16 a, String16 b);
 const wchar_t* str16_SearchIgnoreCase(const wchar_t* haystack, const wchar_t* needle);
 
 /**
+ * Ищет конец слова справа от позиции `pos'.
+ *
+ * @param s   строка, в которой осуществляется поиск
+ * @param len длина строки
+ * @param pos позиция начала поиска
+ */
+size_t str16_FindEndOfWordToTheRight(const wchar_t* s, size_t len, size_t pos);
+
+/**
+ * Ищет конец слова слева от позиции `pos'.
+ *
+ * @param s   строка, в которой осуществляется поиск
+ * @param len длина строки
+ * @param pos позиция начала поиска
+ */
+size_t str16_FindEndOfWordToTheLeft(const wchar_t* s, size_t len, size_t pos);
+
+/**
+ * Ищет конец строки справа от позиции `pos'.
+ *
+ * @param s   строка, в которой осуществляется поиск
+ * @param len длина строки
+ * @param pos позиция начала поиска
+ */
+size_t str16_FindEndOfLineToTheRight(const wchar_t* s, size_t len, size_t pos);
+
+/**
  * [SEC233] ДЕЛА Мутабельная строка (8-бит)
  */
 
@@ -795,8 +827,12 @@ typedef struct MuString16
 void MuString16_Destroy(MuString16* ms);
 bool MuString16_Append(MuString16* ms, const wchar_t* chars, size_t maxLen);
 bool MuString16_AppendStr(MuString16* ms, String16 s);
+bool MuString16_EnsureDoubleTerminated(MuString16* ms);
 bool MuString16_Reset(MuString16* ms, const wchar_t* chars, size_t maxLen);
 bool MuString16_Clear(MuString16* ms);
+bool MuString16_InsertChr(MuString16* ms, wchar_t chr, size_t pos);
+bool MuString16_DeleteChr(MuString16* ms, size_t pos);
+bool MuString16_DeleteRegion(MuString16* ms, size_t pos, size_t len);
 
 /**
  * [SEC24] ЗАГ Парсинг чисел
@@ -1498,6 +1534,21 @@ void DebugPrintMemory(FILE* f, u8* buffer, size_t size)
     }
 }
 
+u32 u32_ColorConvert_RgbaToBgra(u32 rgba)
+{
+    return (rgba & 0xFF00FF00)       // AA--GG--
+        | (rgba >> 16 & 0xFF)        // --BB-->>
+        | (rgba << 16 & 0x00FF0000); // --<<--RR
+}
+
+void u32_ColorConvertArray_RgbaToBgra(u32* src, u32* tgt, i32 countPx)
+{
+    while (countPx-- > 0)
+    {
+        *tgt++ = u32_ColorConvert_RgbaToBgra(*src++);
+    }
+}
+
 /**
  * [SEC16] РЕА Генератор случайных числе PCG
  */
@@ -1890,6 +1941,25 @@ const wchar_t* str16_SearchIgnoreCase(const wchar_t* haystack, const wchar_t* ne
     return nil;
 }
 
+size_t str16_FindEndOfWordToTheRight(const wchar_t* s, size_t len, size_t pos)
+{
+    while (pos < len && s[pos] == ' ') { pos++; }
+    while (pos < len && s[pos] != ' ') { pos++; }
+    return pos;
+}
+
+size_t str16_FindEndOfWordToTheLeft(const wchar_t* s, size_t len, size_t pos)
+{
+    while (pos > 0 && s[pos] == ' ') { pos--; }
+    while (pos > 0 && s[pos] != ' ') { pos--; }
+    return pos;
+}
+
+size_t str16_FindEndOfLineToTheRight(const wchar_t* s, size_t len, size_t pos)
+{
+    while (pos < len && s[pos] != '\n') { pos++; }
+    return pos;
+}
 
 /**
  * [SEC234] РЕА Мутабельная строка (16-бит)
@@ -1937,6 +2007,17 @@ bool MuString16_AppendStr(MuString16* ms, String16 s)
     return MuString16_Append(ms, s.Str, s.Length);
 }
 
+bool MuString16_EnsureDoubleTerminated(MuString16* ms)
+{
+    if (MuString16_Append(ms, L"1", 1))
+    {
+        ms->Length--;
+        ms->Str[ms->Length] = '\0';
+        return true;
+    }
+    return false;
+}
+
 bool MuString16_Reset(MuString16* ms, const wchar_t* chars, size_t maxLen)
 {
     ms->Length = 0;
@@ -1946,6 +2027,56 @@ bool MuString16_Reset(MuString16* ms, const wchar_t* chars, size_t maxLen)
 bool MuString16_Clear(MuString16* ms)
 {
     return MuString16_Reset(ms, L"", 2);
+}
+
+bool MuString16_InsertChr(MuString16* ms, wchar_t chr, size_t pos)
+{
+    const size_t newLen = ms->Length + 1;
+    if (pos > newLen) { return false; }
+    if (newLen + 1 >= ms->Capacity)
+    {
+        size_t capacity = ms->Capacity * 2;
+        if (newLen + 1 > capacity) { capacity = newLen + 1; }
+        wchar_t* buf = realloc(ms->Str, capacity * sizeof(wchar_t));
+        if (buf == nil) { return false; }
+        ms->Str = buf;
+        ms->Capacity = capacity;
+    }
+    for (size_t i = 0; i <= ms->Length - pos; i++)
+    {
+        ms->Str[ms->Length-i+1] = ms->Str[ms->Length-i];
+    }
+    ms->Str[pos] = chr;
+    ms->Length++;
+    ms->Str[ms->Length] = '\0';
+    return true;
+}
+
+bool MuString16_DeleteChr(MuString16* ms, size_t pos)
+{
+    if (ms->Length == 0) { return false; }
+    if (pos > ms->Length - 1) { return false; }
+    for (size_t i = pos; i < ms->Length; i++)
+    {
+        ms->Str[i] = ms->Str[i+1];
+    }
+    ms->Length--;
+    ms->Str[ms->Length] = '\0';
+    return true;
+}
+
+bool MuString16_DeleteRegion(MuString16* ms, size_t pos, size_t len)
+{
+    if (ms->Length == 0) { return false; }
+    if (len == 0) { return false; }
+    if (pos > ms->Length - len) { return false; }
+    for (size_t i = pos; i < ms->Length; i++)
+    {
+        ms->Str[i] = ms->Str[i+len];
+    }
+    ms->Length -= len;
+    ms->Str[ms->Length] = '\0';
+    return true;
 }
 
 /**
