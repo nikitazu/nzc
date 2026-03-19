@@ -1485,29 +1485,16 @@ u64 u64_SwapBytes(u64 v)
 
 void DebugPrintMemory(FILE* f, u8* buffer, size_t size)
 {
-    fprintf(stderr,
+    fprintf(f,
             "Debug: memory dump\n"
             "       ");
-
     for (size_t i = 0; i < size; i++)
     {
-        fprintf(stderr, "%02X", buffer[i]);
-        if (i == size - 1)
-        {
-            fprintf(stderr, "\n");
-        }
-        else if (i % 16 == 15)
-        {
-            fprintf(stderr, "\n       ");
-        }
-        else if (i % 4 == 3)
-        {
-            fprintf(stderr, "  ");
-        }
-        else
-        {
-            fprintf(stderr, " ");
-        }
+        fprintf(f, "%02X", buffer[i]);
+        if (i == size - 1)     { fprintf(f, "\n"); }
+        else if (i % 16 == 15) { fprintf(f, "\n       "); }
+        else if (i % 4 == 3)   { fprintf(f, "  "); }
+        else                   { fprintf(f, " "); }
     }
 }
 
