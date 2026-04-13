@@ -2,7 +2,7 @@
 #define NZC_NZC_H
 
 /**
- * Nikita Zuev Common Code Library v3.3.0
+ * Nikita Zuev Common Code Library v3.4.0
  * ======================================
  *
  * [SEC00] ОГЛ Навигация
@@ -93,6 +93,7 @@
 #define NZC_NZC_H__COMMON_TYPES
 
 #include <limits.h>
+#include <stdarg.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -240,12 +241,21 @@ typedef union FixedArrayU128
     u8                         Bytes[16];
 } FixedArrayU128;
 
+typedef struct Colorf32
+{
+    f32 R;
+    f32 G;
+    f32 B;
+    f32 A;
+} Colorf32;
+
 u16 u16_SwapBytes(u16 v);
 u32 u32_SwapBytes(u32 v);
 u64 u64_SwapBytes(u64 v);
 void DebugPrintMemory(FILE* f, u8* buffer, size_t size);
 u32 u32_ColorConvert_RgbaToBgra(u32 rgba);
 void u32_ColorConvertArray_RgbaToBgra(u32* src, u32* tgt, i32 countPx);
+void u32_ColorConvert_BgraToColorf32(u32 bgra, Colorf32* c);
 
 /**
  * [SEC16] ЗАГ Генератор случайных числе PCG
@@ -696,6 +706,16 @@ typedef struct String16
     const wchar_t* Str;
 } String16;
 
+
+#ifndef STR16
+/**
+ * Макрос создания 16-битной строки.
+ */
+#define STR16(CHARS) \
+    ((String16){.Str = (L##CHARS), .Length = ARRAY_STATIC_COUNT(L##CHARS)-1})
+#endif // STR16
+
+
 /**
  * Создаёт строку из массива символов
  *
@@ -824,9 +844,17 @@ typedef struct MuString16
     wchar_t* Str;
 } MuString16;
 
+inline String16 MuString16_View(MuString16* ms)
+{
+    return (String16){.Str = ms->Str, .Length = ms->Length};
+}
+
 void MuString16_Destroy(MuString16* ms);
 bool MuString16_Append(MuString16* ms, const wchar_t* chars, size_t maxLen);
 bool MuString16_AppendStr(MuString16* ms, String16 s);
+bool MuString16_AppendFormatv(MuString16* ms, wchar_t* fmt, va_list args);
+bool MuString16_AppendFormat(MuString16* ms, wchar_t* fmt, ...);
+void MuString16_AppendHexDump(MuString16* str, void* buffer, size_t size, u8 indent);
 bool MuString16_EnsureDoubleTerminated(MuString16* ms);
 bool MuString16_Reset(MuString16* ms, const wchar_t* chars, size_t maxLen);
 bool MuString16_Clear(MuString16* ms);
@@ -1549,6 +1577,24 @@ void u32_ColorConvertArray_RgbaToBgra(u32* src, u32* tgt, i32 countPx)
     }
 }
 
+void u32_ColorConvert_BgraToColorf32(u32 bgra, Colorf32* c)
+{
+    // 0xAARRGGBB
+    c->R = (f32)((bgra & 0x00FF0000) >> 16) / 255.f;
+    c->G = (f32)((bgra & 0x0000FF00) >>  8) / 255.f;
+    c->B = (f32)((bgra & 0x000000FF) >>  0) / 255.f;
+    c->A = (f32)((bgra & 0xFF000000) >> 24) / 255.f;
+}
+
+void u32_ColorConvert_RgbaToColorf32(u32 rgba, Colorf32* c)
+{
+    // 0xAABBGGRR
+    c->R = (f32)((rgba & 0x000000FF) >>  0) / 255.f;
+    c->G = (f32)((rgba & 0x0000FF00) >>  8) / 255.f;
+    c->B = (f32)((rgba & 0x00FF0000) >> 16) / 255.f;
+    c->A = (f32)((rgba & 0xFF000000) >> 24) / 255.f;
+}
+
 /**
  * [SEC16] РЕА Генератор случайных числе PCG
  */
@@ -2005,6 +2051,59 @@ bool MuString16_Append(MuString16* ms, const wchar_t* chars, size_t maxLen)
 bool MuString16_AppendStr(MuString16* ms, String16 s)
 {
     return MuString16_Append(ms, s.Str, s.Length);
+}
+
+bool MuString16_AppendFormatv(MuString16* ms, wchar_t* fmt, va_list args)
+{
+    // ДЕЛА вместо vswprintf сдеать своё
+    wchar_t temp[256];
+    int charsWritten = vswprintf(temp, ARRAY_STATIC_COUNT(temp),
+                                 fmt,
+                                 args);
+    if (charsWritten == -1) { return false; }
+    MuString16_Append(ms, temp, ARRAY_STATIC_COUNT(temp));
+    return true;
+}
+
+bool MuString16_AppendFormat(MuString16* ms, wchar_t* fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    bool ok = MuString16_AppendFormatv(ms, fmt, args);
+    va_end(args);
+    return ok;
+}
+
+void MuString16_AppendHexDump(MuString16* str, void* buffer, size_t size, u8 indent)
+{
+    for (i8 i = 0; i < indent; i++)
+    {
+        MuString16_Append(str, L" ", 1);
+    }
+    for (size_t i = 0; i < size; i++)
+    {
+        MuString16_AppendFormat(str, L"%02X", ((u8*)buffer)[i]);
+        if (i == size - 1)
+        {
+            MuString16_AppendFormat(str, L"\n");
+        }
+        else if (i % 16 == 15)
+        {
+            MuString16_AppendFormat(str, L"\n");
+            for (i8 i = 0; i < indent; i++)
+            {
+                MuString16_Append(str, L" ", 1);
+            }
+        }
+        else if (i % 4 == 3)
+        {
+            MuString16_AppendFormat(str, L"  ");
+        }
+        else
+        {
+            MuString16_AppendFormat(str, L" ");
+        }
+    }
 }
 
 bool MuString16_EnsureDoubleTerminated(MuString16* ms)
