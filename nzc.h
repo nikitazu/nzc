@@ -2,7 +2,7 @@
 #define NZC_NZC_H
 
 /**
- * Nikita Zuev Common Code Library v3.5.0
+ * Nikita Zuev Common Code Library v3.5.1
  * ======================================
  *
  * [SEC00] ОГЛ Навигация
@@ -2082,10 +2082,10 @@ bool MuString_AppendStr(MuString* ms, String s)
 
 bool MuString_AppendFormatv(MuString* ms, char* fmt, va_list args)
 {
-    // ДЕЛА вместо vswprintf сдеать своё
+    // ДЕЛА вместо vsnprintf сдеать своё
     char temp[256];
-    int charsWritten = snprintf(temp, ARRAY_STATIC_COUNT(temp),
-                                fmt, args);
+    int charsWritten = vsnprintf(temp, ARRAY_STATIC_COUNT(temp),
+                                 fmt, args);
     if (charsWritten == -1) { return false; }
     MuString_Append(ms, temp, ARRAY_STATIC_COUNT(temp));
     return true;
