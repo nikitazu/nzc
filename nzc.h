@@ -2,7 +2,7 @@
 #define NZC_NZC_H
 
 /**
- * Nikita Zuev Common Code Library v3.4.0
+ * Nikita Zuev Common Code Library v3.5.0
  * ======================================
  *
  * [SEC00] ОГЛ Навигация
@@ -28,7 +28,7 @@
  * [SEC23] ОГЛ Строки
  * [SEC231] ОГЛ Строка (8-бит)
  * [SEC232] ОГЛ Строка (16-бит)
- * [SEC233] ДЕЛА Мутабельная строка (8-бит)
+ * [SEC233] ОГЛ Мутабельная строка (8-бит)
  * [SEC234] ОГЛ Мутабельная строка (16-бит)
  * [SEC24] ОГЛ Парсинг чисел
  * [SEC25] ОГЛ Хеши
@@ -828,8 +828,35 @@ size_t str16_FindEndOfWordToTheLeft(const wchar_t* s, size_t len, size_t pos);
 size_t str16_FindEndOfLineToTheRight(const wchar_t* s, size_t len, size_t pos);
 
 /**
- * [SEC233] ДЕЛА Мутабельная строка (8-бит)
+ * [SEC233] ЗАГ Мутабельная строка (8-бит)
  */
+
+#define MuString_CAPACITY_INIT 16
+
+typedef struct MuString
+{
+    size_t Capacity;
+    size_t Length;
+    char*  Str;
+} MuString;
+
+inline String MuString_View(MuString* ms)
+{
+    return (String){.Str = ms->Str, .Length = ms->Length};
+}
+
+void MuString_Destroy(MuString* ms);
+bool MuString_Append(MuString* ms, const char* chars, size_t maxLen);
+bool MuString_AppendStr(MuString* ms, String s);
+bool MuString_AppendFormatv(MuString* ms, char* fmt, va_list args);
+bool MuString_AppendFormat(MuString* ms, char* fmt, ...);
+void MuString_AppendHexDump(MuString* str, void* buffer, size_t size, u8 indent);
+bool MuString_EnsureDoubleTerminated(MuString* ms);
+bool MuString_Reset(MuString* ms, const char* chars, size_t maxLen);
+bool MuString_Clear(MuString* ms);
+bool MuString_InsertChr(MuString* ms, char chr, size_t pos);
+bool MuString_DeleteChr(MuString* ms, size_t pos);
+bool MuString_DeleteRegion(MuString* ms, size_t pos, size_t len);
 
 /**
  * [SEC234] ЗАГ Мутабельная строка (16-бит)
@@ -2005,6 +2032,176 @@ size_t str16_FindEndOfLineToTheRight(const wchar_t* s, size_t len, size_t pos)
 {
     while (pos < len && s[pos] != '\n') { pos++; }
     return pos;
+}
+
+/**
+ * [SEC233] РЕА Мутабельная строка (8-бит)
+ */
+
+void MuString_Destroy(MuString* ms)
+{
+    if (ms->Str != nil)
+    {
+        free(ms->Str);
+        *ms = (MuString){0};
+    }
+}
+
+bool MuString_Append(MuString* ms, const char* chars, size_t maxLen)
+{
+    const size_t charsLen = strnlen(chars, maxLen);
+    const size_t newLen = ms->Length + charsLen;
+    if (ms->Str == nil)
+    {
+        size_t capacity = MuString_CAPACITY_INIT;
+        if (newLen + 1 > capacity) { capacity = newLen + 1; }
+        ms->Str = malloc(capacity);
+        if (ms->Str == nil) { return false; }
+        ms->Capacity = capacity;
+        ms->Length = 0;
+    }
+    if (newLen >= ms->Capacity)
+    {
+        size_t capacity = ms->Capacity * 2;
+        if (newLen + 1 > capacity) { capacity = newLen + 1; }
+        char* buf = realloc(ms->Str, capacity);
+        if (buf == nil) { return false; }
+        ms->Str = buf;
+        ms->Capacity = capacity;
+    }
+    char* buf = ms->Str + ms->Length;
+    memcpy(buf, chars, charsLen + 1);
+    ms->Length = newLen;
+    return true;
+}
+
+bool MuString_AppendStr(MuString* ms, String s)
+{
+    return MuString_Append(ms, s.Str, s.Length);
+}
+
+bool MuString_AppendFormatv(MuString* ms, char* fmt, va_list args)
+{
+    // ДЕЛА вместо vswprintf сдеать своё
+    char temp[256];
+    int charsWritten = snprintf(temp, ARRAY_STATIC_COUNT(temp),
+                                fmt, args);
+    if (charsWritten == -1) { return false; }
+    MuString_Append(ms, temp, ARRAY_STATIC_COUNT(temp));
+    return true;
+}
+
+bool MuString_AppendFormat(MuString* ms, char* fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    bool ok = MuString_AppendFormatv(ms, fmt, args);
+    va_end(args);
+    return ok;
+}
+
+void MuString_AppendHexDump(MuString* str, void* buffer, size_t size, u8 indent)
+{
+    for (i8 i = 0; i < indent; i++)
+    {
+        MuString_Append(str, " ", 1);
+    }
+    for (size_t i = 0; i < size; i++)
+    {
+        MuString_AppendFormat(str, "%02X", ((u8*)buffer)[i]);
+        if (i == size - 1)
+        {
+            MuString_Append(str, "\n", 1);
+        }
+        else if (i % 16 == 15)
+        {
+            MuString_Append(str, "\n", 1);
+            for (i8 i = 0; i < indent; i++)
+            {
+                MuString_Append(str, " ", 1);
+            }
+        }
+        else if (i % 4 == 3)
+        {
+            MuString_Append(str, "  ", 2);
+        }
+        else
+        {
+            MuString_Append(str, " ", 1);
+        }
+    }
+}
+
+bool MuString_EnsureDoubleTerminated(MuString* ms)
+{
+    if (MuString_Append(ms, "1", 1))
+    {
+        ms->Length--;
+        ms->Str[ms->Length] = '\0';
+        return true;
+    }
+    return false;
+}
+
+bool MuString_Reset(MuString* ms, const char* chars, size_t maxLen)
+{
+    ms->Length = 0;
+    return MuString_Append(ms, chars, maxLen);
+}
+
+bool MuString_Clear(MuString* ms)
+{
+    return MuString_Reset(ms, "", 2);
+}
+
+bool MuString_InsertChr(MuString* ms, char chr, size_t pos)
+{
+    const size_t newLen = ms->Length + 1;
+    if (pos > newLen) { return false; }
+    if (newLen + 1 >= ms->Capacity)
+    {
+        size_t capacity = ms->Capacity * 2;
+        if (newLen + 1 > capacity) { capacity = newLen + 1; }
+        char* buf = realloc(ms->Str, capacity);
+        if (buf == nil) { return false; }
+        ms->Str = buf;
+        ms->Capacity = capacity;
+    }
+    for (size_t i = 0; i <= ms->Length - pos; i++)
+    {
+        ms->Str[ms->Length-i+1] = ms->Str[ms->Length-i];
+    }
+    ms->Str[pos] = chr;
+    ms->Length++;
+    ms->Str[ms->Length] = '\0';
+    return true;
+}
+
+bool MuString_DeleteChr(MuString* ms, size_t pos)
+{
+    if (ms->Length == 0) { return false; }
+    if (pos > ms->Length - 1) { return false; }
+    for (size_t i = pos; i < ms->Length; i++)
+    {
+        ms->Str[i] = ms->Str[i+1];
+    }
+    ms->Length--;
+    ms->Str[ms->Length] = '\0';
+    return true;
+}
+
+bool MuString_DeleteRegion(MuString* ms, size_t pos, size_t len)
+{
+    if (ms->Length == 0) { return false; }
+    if (len == 0) { return false; }
+    if (pos > ms->Length - len) { return false; }
+    for (size_t i = pos; i < ms->Length; i++)
+    {
+        ms->Str[i] = ms->Str[i+len];
+    }
+    ms->Length -= len;
+    ms->Str[ms->Length] = '\0';
+    return true;
 }
 
 /**
