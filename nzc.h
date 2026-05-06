@@ -2,7 +2,7 @@
 #define NZC_NZC_H
 
 /**
- * Nikita Zuev Common Code Library v3.5.1
+ * Nikita Zuev Common Code Library v3.6.0
  * ======================================
  *
  * [SEC00] ОГЛ Навигация
@@ -1259,6 +1259,9 @@ typedef enum Guid_Format
 
     /** Как в документации RFC-4122 (через чёрточки в нижнем регистре). */
     Guid_FormatRfc4122   = (1 << 0 | 1 << 1), // 0011
+
+    /** Без нуль-терминатора. */
+    Guid_FormatNoTerm    = 1 << 2,            // 0100
 } Guid_Format;
 
 /**
@@ -3137,49 +3140,52 @@ bool Guid_Nextv7Ex(GuidGen* gg, void* buf)
     return true;
 }
 
-bool Guid_WriteStringToBuffer(void* guid,
+bool Guid_WriteStringToBuffer(void* guidBuffer,
                               char* outBuffer, size_t outBufferSize,
                               Guid_Format format)
 {
-    assert(guid != nil);
+    // Спасибо Дейву за подсказку, по поводу порядка байт и оптимизации
+    // https://www.youtube.com/watch?v=VYTF4KIF2z0
+    //
+    assert(guidBuffer != nil);
     assert(outBuffer != nil);
-    u8* guidArr = guid;
+    u8* guid = guidBuffer;
 
     size_t requiredSize = GUID_STRING_LENGTH + 1;
     if (HAS_FLAG(format, Guid_FormatDash)) { requiredSize += 4; }
     if (outBufferSize < requiredSize) { return false; }
 
-    char* formatString = "%02X";
-    if (HAS_FLAG(format, Guid_FormatLowerCase)) { formatString = "%02x"; }
+    static u8 order[GUID_SIZE_BYTES] = {
+        3,2,1,0, 5,4, 7,6, 8,9,10,11,12,13,14,15
+    };
 
-    char* dashFormatString = "-%02X";
-    if (HAS_FLAG(format, Guid_FormatLowerCase)) { dashFormatString = "-%02x"; }
+    static char hexUpper[] = {
+        '0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F',
+    };
 
-    char* outBuf = outBuffer;
-    if (HAS_FLAG(format, Guid_FormatDash))
+    static char hexLower[] = {
+        '0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f',
+    };
+
+    char* hex = hexUpper;
+    if (HAS_FLAG(format, Guid_FormatLowerCase)) { hex = hexLower; }
+
+    char* out = outBuffer;
+    for (u32 i = 0; i < GUID_SIZE_BYTES; i++)
     {
-        for (size_t i = 0; i < GUID_SIZE_BYTES; i++)
+        u8 b = guid[order[i]];
+
+        *out++ = hex[b >> 4];   // сначала извлекаем старшие 4 бита
+        *out++ = hex[b & 0x0F]; // потом младшие 4 бита
+
+        if (HAS_FLAG(format, Guid_FormatDash)
+            && (i == 3 || i == 5 || i == 7 || i == 9))
         {
-            if (i == 4 || i == 6 || i == 8 || i == 10)
-            {
-                sprintf(outBuf, dashFormatString, guidArr[i]);
-                outBuf += 3;
-            }
-            else
-            {
-                sprintf(outBuf, formatString, guidArr[i]);
-                outBuf += 2;
-            }
+            *out++ = '-';
         }
     }
-    else
-    {
-        for (size_t i = 0; i < GUID_SIZE_BYTES; i++)
-        {
-            sprintf(outBuf, formatString, guidArr[i]);
-            outBuf += 2;
-        }
-    }
+
+    if (!HAS_FLAG(format, Guid_FormatNoTerm)) { *out++ = '\0'; }
 
     return true;
 }

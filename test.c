@@ -296,14 +296,33 @@ void TEST_Guid(bool* success)
     for (size_t i = 0; i < 4; i++)
     {
         Guid_Nextv4(guid);
-        Guid_WriteStringToBuffer(guid, guids, 255, Guid_FormatDash);
+        Guid_WriteStringToBuffer(guid, guids, 50, Guid_FormatDash);
         PRINT("GUIDv4[%zu]: %s", i, guids);
     }
     for (size_t i = 0; i < 4; i++)
     {
         Guid_Nextv7(guid);
-        Guid_WriteStringToBuffer(guid, guids, 255, Guid_FormatDash);
+        Guid_WriteStringToBuffer(guid, guids, 50, Guid_FormatDash);
         PRINT("GUIDv7[%zu]: %s", i, guids);
+    }
+    {
+        // Проверка корректности печати GUID
+        u8 testGuid[16] = {
+            0x01, 0x02, 0x03, 0x04,                         // Data1
+            0xA1, 0xA2,                                     // Data2
+            0xB1, 0xB2,                                     // Data3
+            0xC1, 0xC2,                                     // Data4
+            0xD1, 0xD2, 0xD3, 0xD4, 0xD5, 0xD6,             // Data5
+        };
+
+        Guid_WriteStringToBuffer(testGuid, guids, 50, Guid_FormatDash);
+        PRINT("GUID:      %s   (dash)", guids);
+
+        Guid_WriteStringToBuffer(testGuid, guids, 50, Guid_FormatLowerCase);
+        PRINT("GUID:      %s       (lcase)", guids);
+
+        Guid_WriteStringToBuffer(testGuid, guids, 50, Guid_FormatRfc4122);
+        PRINT("GUID:      %s   (rfc)", guids);
     }
     PRINT("TEST Guid - OK");
 }
