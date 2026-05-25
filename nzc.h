@@ -201,6 +201,18 @@ typedef double f64;
     inline void T##_ClampAssign(T* v, T vmin, T vmax)                   \
     {                                                                   \
         *v = T##_Clamp(*(v), (vmin), (vmax));                           \
+    }                                                                   \
+                                                                        \
+    inline T T##_SafeDiv1(T a, T b)                                     \
+    {                                                                   \
+        if (b == 0) { return 1; }                                       \
+        else { return a / b; }                                          \
+    }                                                                   \
+                                                                        \
+    inline T T##_SafeDiv0(T a, T b)                                     \
+    {                                                                   \
+        if (b == 0) { return 0; }                                       \
+        else { return a / b; }                                          \
     }
 
 Math_Define(i32);
