@@ -225,6 +225,17 @@ Math_Define(u64);
 #undef Math_Define
 
 /**
+ * Проверяет на столкновение две окружности в 2-мерном пространстве.
+ */
+inline bool AreCirclesColliding(f32 x1, f32 y1, f32 r1, f32 x2, f32 y2, f32 r2)
+{
+    f32 dx = x2 - x1;
+    f32 dy = y2 - y1;
+    f32 sr = r1 + r2;
+    return dx*dx + dy*dy <= sr*sr;
+}
+
+/**
  * [SEC15] ЗАГ Операции над байтами
  */
 
@@ -367,6 +378,7 @@ typedef struct Random32
 
 void Random32_Init(Random32* rng);
 u32 Random32_Next(Random32* rng);
+u32 Random32_NextBounded(Random32* rng, u32 bound);
 
 
 /**
@@ -508,6 +520,11 @@ Arena Arena_CreateCopy(const Arena* source, size_t newSize);
     {                                                                   \
         a->X *= val;                                                    \
         a->Y *= val;                                                    \
+    }                                                                   \
+                                                                        \
+    inline T Vec2##T##_Dot(Vec2##T a, Vec2##T b)                        \
+    {                                                                   \
+        return a.X*b.X + a.Y*b.Y;                                       \
     }
 
 Vec2_Define(f32);
@@ -1731,6 +1748,11 @@ void Random32_Init(Random32* rng)
 u32 Random32_Next(Random32* rng)
 {
     return pcg32_random_r(&rng->Impl);
+}
+
+u32 Random32_NextBounded(Random32* rng, u32 bound)
+{
+    return pcg32_boundedrand_r(&rng->Impl, bound);
 }
 
 /**
