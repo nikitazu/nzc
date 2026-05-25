@@ -2,7 +2,7 @@
 #define NZC_NZC_H
 
 /**
- * Nikita Zuev Common Code Library v3.6.0
+ * Nikita Zuev Common Code Library v3.7.0
  * ======================================
  *
  * [SEC00] ОГЛ Навигация
